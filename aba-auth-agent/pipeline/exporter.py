@@ -1,4 +1,8 @@
-"""Export generated narrative to Word document using docxtpl."""
+"""Export generated narrative to Word document using docxtpl.
+
+Supports multiple payor templates. Each payor can have its own .docx template
+in the templates/ directory. If a template doesn't exist, one is auto-generated.
+"""
 
 from datetime import date
 from pathlib import Path
@@ -10,15 +14,59 @@ from schemas.clinical_data import ExtractedClinicalData
 from schemas.narrative import AnthemReauthNarrative
 
 
-def create_template_if_missing():
-    """Create a basic template programmatically if the manual template doesn't exist."""
-    template_path = Path(__file__).parent.parent / "templates" / "anthem_reauth.docx"
-    if template_path.exists():
-        return template_path
+# Registry of supported payors and their template filenames
+PAYOR_TEMPLATES = {
+    "anthem_blue_cross_ca": {
+        "filename": "anthem_reauth.docx",
+        "display_name": "Anthem Blue Cross California",
+        "subtitle": "MCG Care Guidelines Format",
+    },
+    "aetna": {
+        "filename": "aetna_reauth.docx",
+        "display_name": "Aetna",
+        "subtitle": "Six-Criteria Medical Necessity Format",
+    },
+    "optum": {
+        "filename": "optum_reauth.docx",
+        "display_name": "Optum / UnitedHealthcare",
+        "subtitle": "Nine-Component Treatment Plan Format",
+    },
+    "blue_shield_ca": {
+        "filename": "blue_shield_ca_reauth.docx",
+        "display_name": "Blue Shield of California",
+        "subtitle": "Covered California Format",
+    },
+    "medi_cal": {
+        "filename": "medi_cal_reauth.docx",
+        "display_name": "Medi-Cal Managed Care",
+        "subtitle": "Carelon Behavioral Health — HCPCS Codes",
+    },
+}
 
+
+def list_available_payors() -> dict[str, dict]:
+    """Return the registry of supported payors with template availability."""
+    templates_dir = Path(__file__).parent.parent / "templates"
+    result = {}
+    for key, info in PAYOR_TEMPLATES.items():
+        template_path = templates_dir / info["filename"]
+        result[key] = {
+            **info,
+            "template_exists": template_path.exists(),
+        }
+    return result
+
+
+def _generate_template(payor_key: str) -> Path:
+    """Generate a payor-specific Word template programmatically."""
     from docx import Document
     from docx.shared import Pt
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    payor = PAYOR_TEMPLATES[payor_key]
+    templates_dir = Path(__file__).parent.parent / "templates"
+    templates_dir.mkdir(parents=True, exist_ok=True)
+    template_path = templates_dir / payor["filename"]
 
     doc = Document()
     style = doc.styles["Normal"]
@@ -28,7 +76,8 @@ def create_template_if_missing():
     # Title
     title = doc.add_heading("ABA Reauthorization Request", level=1)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    doc.add_paragraph("Anthem Blue Cross California").alignment = WD_ALIGN_PARAGRAPH.CENTER
+    subtitle = doc.add_paragraph(payor["display_name"])
+    subtitle.alignment = WD_ALIGN_PARAGRAPH.CENTER
     doc.add_paragraph("")
 
     # Header fields
@@ -69,20 +118,36 @@ def create_template_if_missing():
     )
     disclaimer.runs[0].font.size = Pt(9)
 
-    template_path.parent.mkdir(parents=True, exist_ok=True)
     doc.save(str(template_path))
+    return template_path
+
+
+def get_template_path(payor_key: str = "anthem_blue_cross_ca") -> Path:
+    """Get the template path for a payor, generating it if it doesn't exist."""
+    if payor_key not in PAYOR_TEMPLATES:
+        raise ValueError(
+            f"Unknown payor '{payor_key}'. Available: {list(PAYOR_TEMPLATES.keys())}"
+        )
+
+    templates_dir = Path(__file__).parent.parent / "templates"
+    template_path = templates_dir / PAYOR_TEMPLATES[payor_key]["filename"]
+
+    if not template_path.exists():
+        template_path = _generate_template(payor_key)
+
     return template_path
 
 
 def export_to_docx(
     data: ExtractedClinicalData,
     narrative: AnthemReauthNarrative,
+    payor_key: str = "anthem_blue_cross_ca",
 ) -> bytes:
     """
-    Render the narrative into a Word document.
+    Render the narrative into a Word document using the payor-specific template.
     Returns the document as bytes for download.
     """
-    template_path = create_template_if_missing()
+    template_path = get_template_path(payor_key)
     doc = DocxTemplate(str(template_path))
 
     context = {

@@ -16,6 +16,8 @@ def load_prompt(name: str) -> str:
 def generate_narrative(data: ExtractedClinicalData) -> AnthemReauthNarrative:
     """
     Generate Anthem Blue Cross CA reauthorization narrative from extracted clinical data.
+
+    Uses prompt caching on the system prompt for ~90% cost savings on repeated calls.
     """
     client = anthropic.Anthropic()
     system_prompt = load_prompt("generation_system.txt")
@@ -27,7 +29,13 @@ def generate_narrative(data: ExtractedClinicalData) -> AnthemReauthNarrative:
         model="claude-sonnet-4-20250514",
         max_tokens=8000,
         temperature=0.2,  # Low temperature for clinical accuracy
-        system=system_prompt,
+        system=[
+            {
+                "type": "text",
+                "text": system_prompt,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
         messages=[
             {
                 "role": "user",
@@ -43,10 +51,11 @@ def generate_narrative(data: ExtractedClinicalData) -> AnthemReauthNarrative:
     raw_text = message.content[0].text
 
     # Strip markdown fences if present
+    raw_text = raw_text.strip()
     if raw_text.startswith("```"):
         raw_text = raw_text.split("\n", 1)[1]
-        if raw_text.endswith("```"):
-            raw_text = raw_text.rsplit("```", 1)[0]
+    if raw_text.endswith("```"):
+        raw_text = raw_text.rsplit("```", 1)[0]
 
     parsed = json.loads(raw_text)
     return AnthemReauthNarrative.model_validate(parsed)
@@ -77,27 +86,32 @@ def validate_narrative_against_source(
         narrative.discharge_plan.content,
     ])
 
+    validation_prompt = load_prompt("validation_system.txt")
+
     message = client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=4000,
         temperature=0.0,
-        system=(
-            "You are a clinical documentation auditor. Extract ALL quantitative claims from the narrative text "
-            "(numbers, percentages, dates, scores, counts) and list them as JSON. Format: "
-            '[{"claim": "description", "value": "extracted value", "section": "which section"}]. '
-            "Respond with ONLY the JSON array."
-        ),
+        system=validation_prompt,
         messages=[
             {
                 "role": "user",
-                "content": f"Extract all quantitative claims from this narrative:\n\n{all_narrative_text}",
+                "content": (
+                    f"<narrative>\n{all_narrative_text}\n</narrative>\n\n"
+                    f"<source_data>\n{source_data.model_dump_json(indent=2)}\n</source_data>\n\n"
+                    "Extract all quantitative claims from the narrative and cross-check "
+                    "against the source data. Return discrepancies."
+                ),
             }
         ],
     )
 
     raw = message.content[0].text
+    raw = raw.strip()
     if raw.startswith("```"):
-        raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
+        raw = raw.split("\n", 1)[1]
+    if raw.endswith("```"):
+        raw = raw.rsplit("```", 1)[0]
 
     try:
         claims = json.loads(raw)
@@ -105,13 +119,13 @@ def validate_narrative_against_source(
         return ["WARNING: Could not parse validation response. Manual review recommended."]
 
     # Cross-check claims against source data
-    # For MVP, return claims for manual review rather than automated matching
     discrepancies = []
     source_json = source_data.model_dump_json()
 
     for claim in claims:
         value_str = str(claim.get("value", ""))
-        if value_str and value_str not in source_json:
+        found = claim.get("found_in_source", True)
+        if value_str and (not found or value_str not in source_json):
             discrepancies.append(
                 f"[{claim.get('section', '?')}] Claim: {claim.get('claim', '?')} "
                 f"(value: {value_str}) — not found verbatim in source data. Verify manually."

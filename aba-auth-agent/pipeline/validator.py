@@ -1,5 +1,8 @@
 """Validate extracted clinical data for completeness against payor requirements."""
 
+from datetime import date, timedelta
+from typing import Optional
+
 from schemas.clinical_data import ExtractedClinicalData
 
 
@@ -17,6 +20,25 @@ ANTHEM_REQUIRED_FIELDS = {
     "caregiver_training.total_sessions": "Number of caregiver training sessions",
     "discharge_plan.measurable_criteria": "At least one measurable discharge criterion",
 }
+
+
+def _check_assessment_recency(
+    assessment_date: Optional[date],
+    assessment_name: str,
+    max_age_months: int = 12,
+) -> Optional[str]:
+    """Check if an assessment is within the required recency window."""
+    if not assessment_date:
+        return None
+    cutoff = date.today() - timedelta(days=max_age_months * 30)
+    if assessment_date < cutoff:
+        age_months = (date.today() - assessment_date).days // 30
+        return (
+            f"Assessment '{assessment_name}' was administered {age_months} months ago "
+            f"(on {assessment_date}). Payors require assessments within {max_age_months} months — "
+            f"high denial risk."
+        )
+    return None
 
 
 def validate_completeness(data: ExtractedClinicalData) -> dict:
@@ -50,10 +72,14 @@ def validate_completeness(data: ExtractedClinicalData) -> dict:
     if not data.assessments:
         missing.append({"field": "assessments", "description": ANTHEM_REQUIRED_FIELDS["assessments"], "severity": "required"})
     else:
-        # Check assessment recency — must be within 12 months
         for a in data.assessments:
             if not a.date_administered:
                 warnings.append(f"Assessment '{a.assessment_name}' is missing administration date — payors require this.")
+            else:
+                # Check assessment recency — must be within 12 months
+                recency_warning = _check_assessment_recency(a.date_administered, a.assessment_name, max_age_months=12)
+                if recency_warning:
+                    warnings.append(recency_warning)
 
     if not data.skill_acquisition_targets:
         missing.append({"field": "skill_acquisition_targets", "description": ANTHEM_REQUIRED_FIELDS["skill_acquisition_targets"], "severity": "required"})
@@ -76,6 +102,14 @@ def validate_completeness(data: ExtractedClinicalData) -> dict:
 
     if not data.treatment_goals:
         missing.append({"field": "treatment_goals", "description": ANTHEM_REQUIRED_FIELDS["treatment_goals"], "severity": "required"})
+    else:
+        # Check for plateau without modification (Aetna terminates if no progress + no modification)
+        for g in data.treatment_goals:
+            if g.status in ("modified", "discontinued") and not g.modification_rationale:
+                warnings.append(
+                    f"Goal {g.goal_number} ('{g.goal_area}') is {g.status} but has no modification rationale — "
+                    f"payors require justification for treatment changes."
+                )
 
     if data.caregiver_training.total_sessions == 0:
         missing.append({"field": "caregiver_training", "description": ANTHEM_REQUIRED_FIELDS["caregiver_training.total_sessions"], "severity": "required"})

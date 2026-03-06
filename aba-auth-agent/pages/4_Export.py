@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from pipeline.exporter import export_to_docx
+from pipeline.exporter import export_to_docx, list_available_payors
 
 st.header("Export Reauthorization Document")
 
@@ -34,9 +34,24 @@ col3.metric("Sections Needing Review", review_needed)
 
 if review_needed > 0:
     st.warning(
-        f"{review_needed} section(s) still contain [CLINICIAN REVIEW NEEDED] placeholders. "
+        f"{review_needed} section(s) still contain [DATA NOT PROVIDED — CLINICIAN ACTION REQUIRED] placeholders. "
         "Ensure these are resolved before submitting to the payor."
     )
+
+# Payor template selector
+st.subheader("Select Payor Template")
+payors = list_available_payors()
+payor_options = {key: f"{info['display_name']} — {info['subtitle']}" for key, info in payors.items()}
+selected_payor = st.selectbox(
+    "Choose the payor template for your Word document:",
+    options=list(payor_options.keys()),
+    format_func=lambda k: payor_options[k],
+    index=0,  # Default to Anthem Blue Cross CA
+)
+
+if not payors[selected_payor]["template_exists"]:
+    st.info(f"A default template will be auto-generated for {payors[selected_payor]['display_name']}. "
+            "You can replace it with a custom .docx template in the `templates/` directory.")
 
 # AI Disclosure checkbox
 confirmed = st.checkbox(
@@ -47,10 +62,11 @@ confirmed = st.checkbox(
 if st.button("Generate Word Document", type="primary", disabled=not confirmed):
     with st.spinner("Building Word document..."):
         try:
-            docx_bytes = export_to_docx(data, narrative)
+            docx_bytes = export_to_docx(data, narrative, payor_key=selected_payor)
             st.session_state.docx_bytes = docx_bytes
 
-            filename = f"reauth_{data.client.client_id or 'client'}_{data.client.auth_period_end or 'draft'}.docx"
+            payor_short = selected_payor.replace("_", "-")
+            filename = f"reauth_{payor_short}_{data.client.client_id or 'client'}_{data.client.auth_period_end or 'draft'}.docx"
 
             st.download_button(
                 label="Download DOCX",

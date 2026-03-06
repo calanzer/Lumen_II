@@ -11,6 +11,19 @@ from pipeline.validator import validate_completeness
 
 st.header("Upload Progress Report")
 
+
+@st.cache_data(show_spinner=False)
+def cached_classify(pdf_bytes: bytes) -> dict:
+    """Cache PDF classification to avoid re-analysis on page reruns."""
+    return classify_pdf(pdf_bytes)
+
+
+@st.cache_data(show_spinner=False)
+def cached_extract(pdf_bytes: bytes, filename: str):
+    """Cache extraction results to avoid redundant API calls on page reruns."""
+    return extract_clinical_data(pdf_bytes, filename)
+
+
 uploaded_file = st.file_uploader(
     "Upload an ABA progress report PDF",
     type=["pdf"],
@@ -24,7 +37,7 @@ if uploaded_file:
 
     # Classify
     with st.spinner("Analyzing PDF..."):
-        classification = classify_pdf(pdf_bytes)
+        classification = cached_classify(pdf_bytes)
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Pages", classification["page_count"])
@@ -37,7 +50,7 @@ if uploaded_file:
     if st.button("Extract Clinical Data", type="primary"):
         with st.spinner("Extracting clinical data via Claude API... (this takes 30-60 seconds)"):
             try:
-                clinical_data = extract_clinical_data(pdf_bytes, uploaded_file.name)
+                clinical_data = cached_extract(pdf_bytes, uploaded_file.name)
                 st.session_state.clinical_data = clinical_data
 
                 # Run validation

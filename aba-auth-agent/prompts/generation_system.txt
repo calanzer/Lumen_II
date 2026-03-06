@@ -36,7 +36,7 @@ Generate a JSON object with the following sections. Each section has a "content"
 
 <critical_rules>
 - Use ONLY data from the <clinical_data> tags. NEVER fabricate scores, dates, targets, or observations.
-- If data is missing for a section, set requires_review to true and write: "[CLINICIAN REVIEW NEEDED: {specific missing data}]"
+- If data is missing for a section, set requires_review to true and write: "[DATA NOT PROVIDED — CLINICIAN ACTION REQUIRED: {specific missing data}]"
 - Do not make treatment recommendations. This is a documentation tool, not a clinical decision tool.
 - Respond with ONLY valid JSON. No markdown, no preamble.
 </critical_rules>
