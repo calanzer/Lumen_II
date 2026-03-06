@@ -1,0 +1,70 @@
+{
+  "client_overview": {
+    "section_name": "Client Overview",
+    "content": "Client ABC-12345 is a 6-year-old diagnosed with Autism Spectrum Disorder (F84.0). The current authorization period spans July 1, 2025 through December 31, 2025, under the supervision of Jane Smith, BCBA (credential #1-23-45678). The client receives intensive ABA services targeting communication deficits, social skill development, and behavior reduction.",
+    "source_data_keys": ["client"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "assessment_summary": {
+    "section_name": "Assessment Summary",
+    "content": "The Verbal Behavior Milestones Assessment and Placement Program (VB-MAPP) was administered on September 15, 2025. Domain scores were as follows: Mand 12.5, Tact 10.0, Listener Responding 8.5, Visual Perceptual Skills 11.0, and Social Behavior 6.5. The Social Behavior domain score of 6.5 represents the area of greatest deficit and remains a primary treatment focus. Continued deficits across all domains support the need for ongoing intensive ABA services.",
+    "source_data_keys": ["assessments"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "skill_acquisition_progress": {
+    "section_name": "Skill Acquisition Progress",
+    "content": "During the current authorization period, the client mastered 1 of 2 active skill acquisition targets (50%). The client mastered 'Mands for 20 different items independently' on October 1, 2025, achieving 95% accuracy and demonstrating generalization across 3 settings and 2 communication partners. The remaining target, 'Initiates greetings with peers without prompting,' is currently at 45% accuracy against a mastery criterion of 80%. While the client responds to peer greetings at 70%, independent initiations remain an area requiring continued intervention.",
+    "source_data_keys": ["skill_acquisition_targets"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "behavior_reduction_progress": {
+    "section_name": "Behavior Reduction Progress",
+    "content": "Elopement, operationally defined as leaving the designated area without permission by moving more than 3 feet beyond the boundary without adult approval, has shown a decreasing trend. Baseline frequency was 4.2 episodes per hour (July 1, 2025), and the current frequency is 1.1 episodes per hour (November 30, 2025), representing a 74% reduction from baseline. Intervention strategies include antecedent manipulation, functional communication training, and DRA with escape extinction. The function of elopement was identified as escape from demands. While significant progress has been made, the current rate remains above the discharge criterion of 0.5 per hour.",
+    "source_data_keys": ["behavior_reduction_targets"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "treatment_plan_update": {
+    "section_name": "Treatment Plan Update",
+    "content": "Goal 1 (Communication): Client will independently mand for 30 different items/activities across 3 settings with 80% accuracy over 3 consecutive sessions. Baseline performance: 8 items with physical prompts in 1 setting. Current performance: 22 items independently across 2 settings. Status: in progress. The client is making steady progress toward this goal and is expected to meet criterion within the next authorization period with continued intensive services.",
+    "source_data_keys": ["treatment_goals"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "hours_justification": {
+    "section_name": "Hours Utilization & Justification",
+    "content": "During the current authorization period, hours utilization was as follows: CPT 97153 (Adaptive Behavior Treatment): 468 of 520 authorized units utilized (90%). CPT 97155 (Protocol Modification): 72 of 80 authorized units utilized (90%). CPT 97156 (Caregiver Training): 18 of 24 authorized units utilized (75%) — the family experienced scheduling conflicts during October due to medical appointments for a sibling. For the next authorization period, 20 weekly units of 97153, 3 weekly units of 97155, and 1.5 weekly units of 97156 are requested. The client continues to demonstrate progress but has not yet met treatment goals, and reduction in hours is not recommended due to active behavior reduction targets and emerging social skills requiring intensive intervention.",
+    "source_data_keys": ["hours_utilization", "requested_hours_by_code", "clinical_justification_for_hours"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "caregiver_training_summary": {
+    "section_name": "Caregiver Training",
+    "content": "A total of 8 caregiver training sessions were conducted during the authorization period. Topics covered included antecedent strategies for elopement, prompting hierarchy for manding, data collection procedures, and generalization strategies for the home environment. The caregiver demonstrated correct use of the 3-step prompting hierarchy with 85% fidelity. Scheduling conflicts in October reduced sessions from the planned 12 to 8. Continued caregiver training is recommended to support generalization of treatment gains across settings.",
+    "source_data_keys": ["caregiver_training"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "medical_necessity": {
+    "section_name": "Medical Necessity Statement",
+    "content": "Continued intensive ABA services are medically necessary for this 6-year-old client diagnosed with Autism Spectrum Disorder (F84.0). Functional impairment is documented across multiple domains: the client's VB-MAPP Social Behavior domain score of 6.5 reflects significant deficits in social interaction, a core feature of ASD. Communication deficits persist, with the client currently at 22 of 30 targeted mands and independent peer greeting initiations at only 45% accuracy. Elopement behavior, while reduced by 74% from baseline, remains above safe levels at 1.1 episodes per hour and poses a safety risk. Without continued ABA services at the current intensity, the client is at significant risk of regression. The client's elopement behavior was maintained by escape from demands, and without ongoing intervention to strengthen replacement behaviors (functional communication), the behavior is likely to return to baseline levels. Social skill acquisition requires continued intensive practice opportunities that cannot be replicated in less intensive settings. The requested intensity of 20 weekly units of direct service (97153), 3 weekly units of supervision (97155), and 1.5 weekly units of caregiver training (97156) is appropriate given the severity of deficits, the active behavior reduction protocol, and the need for continued caregiver training to support generalization. A step-down in intensity is not clinically appropriate at this time as the client has met only 1 of 4 discharge criteria.",
+    "source_data_keys": ["client", "assessments", "skill_acquisition_targets", "behavior_reduction_targets", "hours_utilization", "discharge_plan"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "discharge_plan": {
+    "section_name": "Discharge Plan",
+    "content": "Discharge from intensive ABA services will be recommended when the client meets the following measurable criteria: (1) elopement frequency below 0.5 per hour for 4 consecutive weeks (currently 1.1/hr), (2) mastery of 80% of current skill acquisition targets (currently 50%), (3) caregiver implementation fidelity above 90% across all trained procedures (currently 85%), and (4) VB-MAPP scores within 1 standard deviation of age-matched peers in Mand and Tact domains. The client has currently met 1 of 4 discharge criteria. The transition plan involves a step-down to 15 hours/week consultation model with monthly BCBA oversight once criteria are met.",
+    "source_data_keys": ["discharge_plan"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "overall_confidence": 0.92,
+  "flags_for_bcba": [
+    "CPT 97156 utilization was 75% — verify scheduling conflict explanation is sufficient for payor",
+    "Social Skills target at 45% — consider whether goal modification is warranted"
+  ]
+}

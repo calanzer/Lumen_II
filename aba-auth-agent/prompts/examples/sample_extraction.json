@@ -1,0 +1,132 @@
+{
+  "client": {
+    "client_id": "ABC-12345",
+    "age_years": 6,
+    "diagnosis_codes": ["F84.0"],
+    "diagnosis_descriptions": ["Autism Spectrum Disorder"],
+    "auth_period_start": "2025-07-01",
+    "auth_period_end": "2025-12-31",
+    "supervising_bcba": "Jane Smith, BCBA",
+    "bcba_credential_number": "1-23-45678"
+  },
+  "assessments": [
+    {
+      "assessment_type": "VB-MAPP",
+      "assessment_name": "Verbal Behavior Milestones Assessment and Placement Program",
+      "date_administered": "2025-09-15",
+      "raw_score": null,
+      "standard_score": null,
+      "percentile": null,
+      "age_equivalent": null,
+      "domain_scores": {
+        "Mand": 12.5,
+        "Tact": 10.0,
+        "Listener Responding": 8.5,
+        "Visual Perceptual Skills": 11.0,
+        "Social Behavior": 6.5
+      },
+      "previous_score": null,
+      "previous_date": "2025-01-15"
+    }
+  ],
+  "skill_acquisition_targets": [
+    {
+      "domain": "Manding",
+      "target_name": "Mands for 20 different items independently",
+      "date_introduced": "2025-07-15",
+      "date_mastered": "2025-10-01",
+      "is_mastered": true,
+      "current_accuracy_pct": 95.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": true,
+      "notes": "Generalized across 3 settings and 2 communication partners"
+    },
+    {
+      "domain": "Social Skills",
+      "target_name": "Initiates greetings with peers without prompting",
+      "date_introduced": "2025-08-01",
+      "date_mastered": null,
+      "is_mastered": false,
+      "current_accuracy_pct": 45.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": false,
+      "notes": "Responds to peer greetings at 70%, but initiations remain low"
+    }
+  ],
+  "behavior_reduction_targets": [
+    {
+      "behavior_name": "Elopement",
+      "operational_definition": "Leaving the designated area (therapy room, classroom, or caregiver-defined boundary) without permission, defined as moving more than 3 feet beyond the boundary without adult approval",
+      "measurement_type": "frequency",
+      "baseline_value": 4.2,
+      "baseline_date": "2025-07-01",
+      "current_value": 1.1,
+      "current_date": "2025-11-30",
+      "trend": "decreasing",
+      "unit": "per hour",
+      "function_of_behavior": "escape from demands",
+      "intervention_strategies": ["Antecedent manipulation", "Functional communication training", "DRA with escape extinction"]
+    }
+  ],
+  "hours_utilization": [
+    {
+      "cpt_code": "97153",
+      "authorized_units": 520,
+      "utilized_units": 468,
+      "utilization_pct": 90.0,
+      "explanation_if_low": null
+    },
+    {
+      "cpt_code": "97155",
+      "authorized_units": 80,
+      "utilized_units": 72,
+      "utilization_pct": 90.0,
+      "explanation_if_low": null
+    },
+    {
+      "cpt_code": "97156",
+      "authorized_units": 24,
+      "utilized_units": 18,
+      "utilization_pct": 75.0,
+      "explanation_if_low": "Family had scheduling conflicts during October due to medical appointments for sibling"
+    }
+  ],
+  "treatment_goals": [
+    {
+      "goal_number": 1,
+      "goal_area": "Communication",
+      "goal_statement": "Client will independently mand for 30 different items/activities across 3 settings with 80% accuracy over 3 consecutive sessions",
+      "baseline_performance": "Client manded for 8 items with physical prompts in 1 setting",
+      "current_performance": "Client independently mands for 22 items across 2 settings",
+      "target_criterion": "80% accuracy across 3 consecutive sessions in 3 settings",
+      "status": "in progress",
+      "modification_rationale": null,
+      "related_targets": ["Mands for 20 different items independently"]
+    }
+  ],
+  "caregiver_training": {
+    "total_sessions": 8,
+    "topics_covered": ["Antecedent strategies for elopement", "Prompting hierarchy for manding", "Data collection procedures", "Generalization strategies for home"],
+    "caregiver_skill_acquisition": "Caregiver demonstrates correct use of 3-step prompting hierarchy with 85% fidelity",
+    "barriers_to_participation": "Scheduling conflicts in October reduced sessions from planned 12 to 8"
+  },
+  "discharge_plan": {
+    "measurable_criteria": [
+      "Elopement frequency below 0.5 per hour for 4 consecutive weeks",
+      "Mastery of 80% of current skill acquisition targets",
+      "Caregiver implementation fidelity above 90% across all trained procedures",
+      "VB-MAPP scores within 1 standard deviation of age-matched peers in Mand and Tact domains"
+    ],
+    "estimated_discharge_date": null,
+    "transition_plan": "Step-down to 15 hours/week consultation model with monthly BCBA oversight",
+    "current_discharge_readiness": "Client has met 1 of 4 discharge criteria. Continued intensive services recommended."
+  },
+  "requested_hours_by_code": {
+    "97153": 20,
+    "97155": 3,
+    "97156": 1.5
+  },
+  "clinical_justification_for_hours": "Client continues to demonstrate progress but has not yet met treatment goals. Reduction in hours not recommended at this time due to active behavior reduction targets and emerging social skills requiring intensive intervention.",
+  "confidence_notes": [],
+  "missing_fields": []
+}
