@@ -1,0 +1,72 @@
+{
+  "client_overview": {
+    "section_name": "Client Overview",
+    "content": "Client CR-2024-0847 is a 4-year-old male diagnosed with Autism Spectrum Disorder, Level 2 — Requiring Substantial Support (F84.0) and Mixed Receptive-Expressive Language Disorder (F80.2). The current authorization period spans July 1, 2025 through December 31, 2025, under the supervision of Dr. Maria Gonzalez, BCBA-D (credential #1-19-42831). The client receives intensive ABA services targeting communication development, social skill acquisition, behavior reduction (aggression, elopement, vocal stereotypy), and adaptive daily living skills. Services are provided in the clinic and home settings with active caregiver training to promote generalization.",
+    "source_data_keys": ["client"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "assessment_summary": {
+    "section_name": "Assessment Summary",
+    "content": "Three standardized assessments were administered during the current authorization period. The Verbal Behavior Milestones Assessment and Placement Program (VB-MAPP), administered October 2, 2025, yielded an age equivalent of 24-30 months. Domain scores reflected the following profile: relative strengths in Visual Perceptual Skills (12.0), Echoic (11.5), and Mand (10.5), with significant deficits in Intraverbal (2.5), Spontaneous Vocal Behavior (3.5), and Classroom Routines (3.0). Social Behavior and Social Play scored 4.5, consistent with the ASD-related social communication deficits that are a primary treatment focus.\n\nThe Vineland Adaptive Behavior Scales, Third Edition (Vineland-3) Comprehensive Interview Form was administered October 8, 2025. The Adaptive Behavior Composite (ABC) score was 62 (1st percentile, age equivalent 22 months), an improvement from the prior administration score of 58 (April 12, 2025). Domain scores were: Communication 58, Daily Living Skills 68, Socialization 55, and Motor Skills 78. The Socialization domain score of 55 represents the area of greatest impairment.\n\nThe Childhood Autism Rating Scale, Second Edition (CARS-2) was administered October 8, 2025, with a raw score of 35.5 (mild-to-moderate autism range), an improvement from the previous score of 37.0 (April 12, 2025).",
+    "source_data_keys": ["assessments"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "skill_acquisition_progress": {
+    "section_name": "Skill Acquisition Progress",
+    "content": "During the current authorization period, the client mastered 5 of 10 active skill acquisition targets (50%). Mastered targets include: (1) Mands for missing items using carrier phrase 'I want ___' — mastered September 19, 2025 at 92% accuracy with generalization across clinic, home, and community settings with 3 adults; (2) Tacts 50 common objects — mastered October 30, 2025 at 88% accuracy with generalization across 2D, 3D, and natural environment formats; (3) Parallel play alongside peer for 3 minutes — mastered November 4, 2025 at 85% accuracy in structured clinic setting; (4) Independent hand washing with visual schedule — mastered October 15, 2025 at 90% accuracy with visual schedule faded to final 2 steps; (5) Imitates 10 gross motor actions — mastered August 28, 2025 at 95% accuracy.\n\nFive targets remain in acquisition: Mands for actions using 2-word phrases (55%), Tacts actions in pictures (40%), Follows 2-step unrelated instructions (35%), Initiates joint attention (20%), and Tolerates teeth brushing (60%). The joint attention target at 20% reflects a core ASD deficit requiring continued intensive intervention. The 2-step instruction target at 35% may involve an auditory processing component that warrants further assessment.",
+    "source_data_keys": ["skill_acquisition_targets"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "behavior_reduction_progress": {
+    "section_name": "Behavior Reduction Progress",
+    "content": "Three behavior reduction targets are currently active.\n\nAggression (hitting, kicking, biting, scratching, head-butting directed at others) showed a decreasing trend from a baseline of 8.3 episodes per hour (July 1, 2025) to a current rate of 2.7 episodes per hour (November 10, 2025), representing a 67% reduction. The behavior is dual-maintained by escape from demands and access to tangibles. Interventions include Functional Communication Training (FCT) teaching 'break please' and 'my turn,' antecedent demand fading, noncontingent reinforcement on a 2-minute fixed-time schedule, DRA, and response blocking for safety.\n\nVocal stereotypy (repetitive non-communicative vocalizations including scripting, sustained humming >3 seconds, and non-directed echolalia) decreased from 45% of intervals at baseline to 32% of intervals currently, a 29% reduction. The behavior is maintained by automatic/sensory reinforcement. Interventions include response interruption and redirection (RIRD), DRO on a 1-minute momentary schedule, and increased opportunities for functional vocal behavior.\n\nElopement (leaving designated area without permission) decreased from 3.1 episodes per hour at baseline to 0.8 episodes per hour currently, a 74% reduction. The behavior is maintained by escape from demands. Interventions include environmental arrangement, FCT, Premack contingencies, and visual schedules.",
+    "source_data_keys": ["behavior_reduction_targets"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "treatment_plan_update": {
+    "section_name": "Treatment Plan Update",
+    "content": "Goal 1 (Communication): Client will independently use 2-3 word mand frames to request desired items, actions, and cessation across 3 settings with 80% accuracy over 5 consecutive sessions. Baseline: 12 single-word mands with gestural prompts in clinic only. Current: carrier phrase mastered for 25+ items across 2 settings; 2-word action mands at 55%. Status: in progress.\n\nGoal 2 (Social Skills): Client will engage in reciprocal play interactions with a peer for 5 minutes, including turn-taking and joint attention, with ≤1 adult prompt across 3 consecutive opportunities. Baseline: solitary play only with no peer-directed initiations. Current: parallel play for 3+ minutes achieved; joint attention responses at 60%, initiations at 20%. Status: in progress.\n\nGoal 3 (Behavior Reduction): Client will reduce aggression to fewer than 1.0 episodes per hour across all settings for 4 consecutive weeks using functionally equivalent replacement behaviors. Baseline: 8.3 episodes/hr. Current: 2.7 episodes/hr (67% reduction). Status: in progress.\n\nGoal 4 (Adaptive Behavior): Client will independently complete 5 daily living skill routines with visual schedule support only. Modified from original 7 routines to 5 highest-priority routines after team discussion; shoes and coat deferred to next auth period to prioritize hygiene and safety. Baseline: 0 of 5 independent. Current: 2 of 5 independent (hand washing, gross motor imitation). Status: modified.",
+    "source_data_keys": ["treatment_goals"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "hours_justification": {
+    "section_name": "Hours Utilization & Justification",
+    "content": "During the current authorization period, hours utilization was as follows: CPT 97153 (Adaptive Behavior Treatment by Protocol): 580 of 624 authorized units utilized (92.9%). CPT 97155 (Adaptive Behavior Treatment Protocol Modification): 88 of 96 authorized units utilized (91.7%). CPT 97156 (Family Adaptive Behavior Treatment Guidance): 36 of 48 authorized units utilized (75.0%) — family cancelled 4 sessions due to illness (gastroenteritis outbreak at sibling's daycare) and 2 sessions due to caregiver work schedule changes; make-up sessions were offered but could not all be rescheduled within the authorization period. CPT 97151 (Behavior Identification Assessment): 24 of 24 authorized units utilized (100%).\n\nFor the next authorization period, 24 weekly units of 97153, 4 weekly units of 97155, 2 weekly units of 97156, and 1 weekly unit of 97151 are requested. The client's Level 2 ASD diagnosis with co-occurring language disorder, active safety concerns (aggression at 2.7/hr), core social communication deficits (joint attention at 20%), and Vineland-3 ABC of 62 (1st percentile) support the requested intensity. The client has met 0 of 6 discharge criteria, and a reduction in service intensity is not clinically appropriate at this time.",
+    "source_data_keys": ["hours_utilization", "requested_hours_by_code", "clinical_justification_for_hours"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "caregiver_training_summary": {
+    "section_name": "Caregiver Training",
+    "content": "A total of 14 caregiver training sessions were conducted during the authorization period. Topics covered included FCT implementation at home, antecedent strategies for aggression prevention, 3-step prompting hierarchy for manding, visual schedule creation and use, simplified data collection methods, naturalistic teaching during mealtimes and play, response blocking safety procedures, generalization strategies, and toilet training readiness assessment.\n\nThe primary caregiver (mother) demonstrates FCT implementation with 82% fidelity and correct use of the 3-step prompting hierarchy with 88% fidelity. The father participates in alternate sessions and demonstrates prompting at 75% fidelity. Both caregivers independently implement visual schedules for hand washing and mealtimes.\n\nBarriers to participation included the father's rotating work schedule (limits attendance to every other session), family illness in October (4 cancelled sessions), and a language barrier — sessions are conducted in English with occasional Spanish interpretation, and bilingual materials have been provided. Continued caregiver training is recommended to increase both caregivers' fidelity above 90% and to extend generalization to community settings.",
+    "source_data_keys": ["caregiver_training"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "medical_necessity": {
+    "section_name": "Medical Necessity Statement",
+    "content": "Continued intensive ABA services are medically necessary for this 4-year-old client diagnosed with Autism Spectrum Disorder, Level 2 (F84.0) and Mixed Receptive-Expressive Language Disorder (F80.2).\n\nFunctional impairment is documented across multiple domains. The Vineland-3 Adaptive Behavior Composite score of 62 (1st percentile, age equivalent 22 months) reflects a developmental gap of approximately 26 months. The Socialization domain score of 55 represents the most significant impairment area. VB-MAPP assessment reveals critical deficits in Intraverbal skills (2.5), Spontaneous Vocal Behavior (3.5), and Social Behavior (4.5) — all domains directly related to ASD core deficits in social communication and restricted/repetitive behaviors.\n\nRisk of regression without continued services is substantial. The client's aggression, while reduced by 67% from baseline, remains at 2.7 episodes per hour and poses an ongoing safety concern. Without continued FCT intervention and behavioral programming, regression to baseline levels (8.3/hr) is likely, as the replacement behaviors are not yet fully established. Elopement, reduced by 74%, remains a safety risk at 0.8 episodes per hour. Vocal stereotypy at 32% of intervals during instruction interferes with learning opportunities and would likely increase without active intervention.\n\nThe client's deficits are directly connected to ASD core features: social communication deficits (joint attention initiation at 20%, peer interaction requiring adult facilitation), restricted/repetitive behaviors (vocal stereotypy at 32% of intervals), and functional communication limitations (2-word mand frames at 55%).\n\nThe requested intensity of 24 weekly units of direct service (97153), 4 weekly units of supervision (97155), 2 weekly units of caregiver training (97156), and 1 weekly unit of assessment (97151) is appropriate given the severity of deficits (Vineland ABC 1st percentile), the number of active treatment goals (4 goals, 10 skill targets), the ongoing safety concerns, and the client's demonstrated responsiveness to treatment (50% target mastery rate, 67-74% behavior reductions). The client has met 0 of 6 discharge criteria, confirming that step-down is premature.",
+    "source_data_keys": ["client", "assessments", "skill_acquisition_targets", "behavior_reduction_targets", "hours_utilization", "discharge_plan"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "discharge_plan": {
+    "section_name": "Discharge Plan",
+    "content": "Discharge from intensive ABA services will be recommended when the client meets the following 6 measurable criteria: (1) Aggression below 1.0 episodes per hour for 4 consecutive weeks across all settings (currently 2.7/hr); (2) Elopement below 0.3 episodes per hour for 4 consecutive weeks (currently 0.8/hr); (3) Vocal stereotypy below 20% of intervals during structured instruction (currently 32%); (4) Mastery of 80% of current skill acquisition targets with generalization across 3 settings (currently 50% mastered, generalization limited); (5) Caregiver implementation fidelity above 90% for FCT and prompting procedures (currently 82-88% for mother, 75% for father); (6) Vineland-3 Adaptive Behavior Composite score at or above 70 (currently 62).\n\nThe client has currently met 0 of 6 discharge criteria. The step-down plan involves three phases: Phase 1 — reduce to 20 hours/week direct service with maintained supervision; Phase 2 — reduce to 12 hours/week focused on social skills and community integration; Phase 3 — transition to consultation model (5 hours/week) with monthly BCBA check-ins, followed by transition to school-based services with IEP consultation.",
+    "source_data_keys": ["discharge_plan"],
+    "requires_review": false,
+    "review_note": null
+  },
+  "overall_confidence": 0.95,
+  "flags_for_bcba": [
+    "CPT 97156 utilization was 75% — verify that payor will accept the illness/scheduling explanation",
+    "Joint attention initiation at 20% — consider whether additional social skills group opportunities should be added",
+    "VB-MAPP previous scores referenced but not available in document — may need to attach prior report",
+    "Father's caregiver fidelity at 75% — consider targeted father-focused training sessions"
+  ]
+}

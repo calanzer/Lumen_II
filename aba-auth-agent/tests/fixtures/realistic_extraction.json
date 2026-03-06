@@ -1,0 +1,373 @@
+{
+  "source_filename": "CentralReach_ProgressReport_2025Q3_Martinez.pdf",
+  "extraction_timestamp": "2025-11-15T14:30:00",
+  "extraction_model": "claude-sonnet-4-20250514",
+  "client": {
+    "client_id": "CR-2024-0847",
+    "age_years": 4,
+    "diagnosis_codes": ["F84.0", "F80.2"],
+    "diagnosis_descriptions": [
+      "Autism Spectrum Disorder, Level 2 — Requiring Substantial Support",
+      "Mixed Receptive-Expressive Language Disorder"
+    ],
+    "auth_period_start": "2025-07-01",
+    "auth_period_end": "2025-12-31",
+    "supervising_bcba": "Dr. Maria Gonzalez, BCBA-D",
+    "bcba_credential_number": "1-19-42831"
+  },
+  "assessments": [
+    {
+      "assessment_type": "VB-MAPP",
+      "assessment_name": "Verbal Behavior Milestones Assessment and Placement Program",
+      "date_administered": "2025-10-02",
+      "raw_score": null,
+      "standard_score": null,
+      "percentile": null,
+      "age_equivalent": "24-30 months",
+      "domain_scores": {
+        "Mand": 10.5,
+        "Tact": 7.0,
+        "Listener Responding": 6.5,
+        "Visual Perceptual Skills and Match-to-Sample": 12.0,
+        "Independent Play": 5.0,
+        "Social Behavior and Social Play": 4.5,
+        "Motor Imitation": 9.0,
+        "Echoic": 11.5,
+        "Spontaneous Vocal Behavior": 3.5,
+        "Listener Responding by Function, Feature, Class": 4.0,
+        "Intraverbal": 2.5,
+        "Classroom Routines and Group Skills": 3.0,
+        "Linguistic Structure": 4.5,
+        "Reading": 0.0,
+        "Writing": 0.0,
+        "Math": 1.0
+      },
+      "previous_score": null,
+      "previous_date": "2025-04-10"
+    },
+    {
+      "assessment_type": "Vineland-3",
+      "assessment_name": "Vineland Adaptive Behavior Scales, Third Edition — Comprehensive Interview Form",
+      "date_administered": "2025-10-08",
+      "raw_score": null,
+      "standard_score": 62.0,
+      "percentile": 1.0,
+      "age_equivalent": "22 months",
+      "domain_scores": {
+        "Communication": 58.0,
+        "Daily Living Skills": 68.0,
+        "Socialization": 55.0,
+        "Motor Skills": 78.0,
+        "Adaptive Behavior Composite": 62.0
+      },
+      "previous_score": 58.0,
+      "previous_date": "2025-04-12"
+    },
+    {
+      "assessment_type": "Other",
+      "assessment_name": "Childhood Autism Rating Scale, Second Edition (CARS-2 Standard Form)",
+      "date_administered": "2025-10-08",
+      "raw_score": 35.5,
+      "standard_score": null,
+      "percentile": null,
+      "age_equivalent": null,
+      "domain_scores": {},
+      "previous_score": 37.0,
+      "previous_date": "2025-04-12"
+    }
+  ],
+  "skill_acquisition_targets": [
+    {
+      "domain": "Manding",
+      "target_name": "Mands for missing items using carrier phrase 'I want ___'",
+      "date_introduced": "2025-07-08",
+      "date_mastered": "2025-09-19",
+      "is_mastered": true,
+      "current_accuracy_pct": 92.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": true,
+      "notes": "Generalized across clinic, home, and community park settings with 3 different adults"
+    },
+    {
+      "domain": "Manding",
+      "target_name": "Mands for actions using 2-word phrases (e.g., 'push me', 'open please')",
+      "date_introduced": "2025-09-22",
+      "date_mastered": null,
+      "is_mastered": false,
+      "current_accuracy_pct": 55.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": false,
+      "notes": "Emerging with gestural prompt; independent in high-motivation contexts only (swing, bubbles)"
+    },
+    {
+      "domain": "Tacting",
+      "target_name": "Tacts 50 common objects in natural environment",
+      "date_introduced": "2025-07-08",
+      "date_mastered": "2025-10-30",
+      "is_mastered": true,
+      "current_accuracy_pct": 88.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": true,
+      "notes": "Mastered 53 items; generalizes across 2D images, 3D objects, and natural environment"
+    },
+    {
+      "domain": "Tacting",
+      "target_name": "Tacts actions in pictures and videos (e.g., 'running', 'eating')",
+      "date_introduced": "2025-08-12",
+      "date_mastered": null,
+      "is_mastered": false,
+      "current_accuracy_pct": 40.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": false,
+      "notes": "Identifies 8 of 20 target actions; errors concentrated on similar topography actions (jumping/hopping)"
+    },
+    {
+      "domain": "Listener Responding",
+      "target_name": "Follows 2-step unrelated instructions (e.g., 'clap hands and touch nose')",
+      "date_introduced": "2025-07-15",
+      "date_mastered": null,
+      "is_mastered": false,
+      "current_accuracy_pct": 35.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": false,
+      "notes": "Follows single-step instructions at 90% but loses second step; possible auditory processing component"
+    },
+    {
+      "domain": "Social Skills",
+      "target_name": "Parallel play alongside peer for 3 minutes without disruptive behavior",
+      "date_introduced": "2025-08-05",
+      "date_mastered": "2025-11-04",
+      "is_mastered": true,
+      "current_accuracy_pct": 85.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": false,
+      "notes": "Mastered in structured clinic setting; not yet tested in community or school settings"
+    },
+    {
+      "domain": "Social Skills",
+      "target_name": "Initiates joint attention by showing or pointing to items of interest",
+      "date_introduced": "2025-09-02",
+      "date_mastered": null,
+      "is_mastered": false,
+      "current_accuracy_pct": 20.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": false,
+      "notes": "Responds to joint attention bids at 60% but rarely initiates; critical ASD core deficit"
+    },
+    {
+      "domain": "Daily Living Skills",
+      "target_name": "Independent hand washing with visual schedule support",
+      "date_introduced": "2025-07-22",
+      "date_mastered": "2025-10-15",
+      "is_mastered": true,
+      "current_accuracy_pct": 90.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": true,
+      "notes": "Completed all steps independently; visual schedule faded to last 2 steps only"
+    },
+    {
+      "domain": "Daily Living Skills",
+      "target_name": "Tolerates teeth brushing for 60 seconds without crying or turning head",
+      "date_introduced": "2025-08-19",
+      "date_mastered": null,
+      "is_mastered": false,
+      "current_accuracy_pct": 60.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": false,
+      "notes": "Tolerates 40 seconds currently; systematic desensitization protocol in place"
+    },
+    {
+      "domain": "Imitation",
+      "target_name": "Imitates 10 gross motor actions on request",
+      "date_introduced": "2025-07-08",
+      "date_mastered": "2025-08-28",
+      "is_mastered": true,
+      "current_accuracy_pct": 95.0,
+      "mastery_criterion_pct": 80.0,
+      "generalization_demonstrated": true,
+      "notes": "Mastered all 10 actions; now serves as prerequisite for motor imitation sequences"
+    }
+  ],
+  "behavior_reduction_targets": [
+    {
+      "behavior_name": "Aggression",
+      "operational_definition": "Any instance of hitting, kicking, biting, scratching, or head-butting directed toward another person's body, with sufficient force to produce an audible sound, leave a visible mark, or cause the other person to vocalize in pain. Includes attempts where contact is made but intercepted by blocking.",
+      "measurement_type": "frequency",
+      "baseline_value": 8.3,
+      "baseline_date": "2025-07-01",
+      "current_value": 2.7,
+      "current_date": "2025-11-10",
+      "trend": "decreasing",
+      "unit": "per hour",
+      "function_of_behavior": "escape from demands; access to tangibles (dual-maintained)",
+      "intervention_strategies": [
+        "Functional Communication Training (FCT) — teaching 'break please' and 'my turn'",
+        "Antecedent manipulation — demand fading with gradual increase",
+        "Noncontingent reinforcement (NCR) — 2-minute fixed-time schedule",
+        "Differential reinforcement of alternative behavior (DRA)",
+        "Response blocking for safety"
+      ]
+    },
+    {
+      "behavior_name": "Stereotypy (vocal)",
+      "operational_definition": "Repetitive vocalizations that are not communicative in context, including scripting from videos/TV, repetitive humming lasting more than 3 seconds, and echolalic utterances not directed at a communication partner. Scored as percentage of 10-second partial intervals during structured instruction.",
+      "measurement_type": "interval",
+      "baseline_value": 45.0,
+      "baseline_date": "2025-07-01",
+      "current_value": 32.0,
+      "current_date": "2025-11-10",
+      "trend": "decreasing",
+      "unit": "percent of intervals",
+      "function_of_behavior": "automatic/sensory reinforcement",
+      "intervention_strategies": [
+        "Response interruption and redirection (RIRD)",
+        "Differential reinforcement of other behavior (DRO) — 1-minute momentary",
+        "Increased opportunities for functional vocal behavior"
+      ]
+    },
+    {
+      "behavior_name": "Elopement",
+      "operational_definition": "Leaving or attempting to leave the designated therapeutic area (therapy room, fenced playground, or parent-defined boundary) without adult permission, defined as any movement of both feet beyond the boundary or sustained contact with exit points (door handles, gate latches) lasting more than 2 seconds.",
+      "measurement_type": "frequency",
+      "baseline_value": 3.1,
+      "baseline_date": "2025-07-01",
+      "current_value": 0.8,
+      "current_date": "2025-11-10",
+      "trend": "decreasing",
+      "unit": "per hour",
+      "function_of_behavior": "escape from demands",
+      "intervention_strategies": [
+        "Environmental arrangement — secured exits with adult supervision",
+        "FCT — requesting 'go outside' or 'all done' appropriately",
+        "Premack principle — access to preferred outdoor activity contingent on task completion",
+        "Visual schedule to increase predictability"
+      ]
+    }
+  ],
+  "hours_utilization": [
+    {
+      "cpt_code": "97153",
+      "authorized_units": 624,
+      "utilized_units": 580,
+      "utilization_pct": 92.9,
+      "explanation_if_low": null
+    },
+    {
+      "cpt_code": "97155",
+      "authorized_units": 96,
+      "utilized_units": 88,
+      "utilization_pct": 91.7,
+      "explanation_if_low": null
+    },
+    {
+      "cpt_code": "97156",
+      "authorized_units": 48,
+      "utilized_units": 36,
+      "utilization_pct": 75.0,
+      "explanation_if_low": "Family cancelled 4 sessions due to illness (gastroenteritis outbreak at sibling's daycare) and 2 sessions due to caregiver work schedule changes. Make-up sessions offered but not all could be rescheduled within the auth period."
+    },
+    {
+      "cpt_code": "97151",
+      "authorized_units": 24,
+      "utilized_units": 24,
+      "utilization_pct": 100.0,
+      "explanation_if_low": null
+    }
+  ],
+  "treatment_goals": [
+    {
+      "goal_number": 1,
+      "goal_area": "Communication",
+      "goal_statement": "Client will independently use 2-3 word mand frames to request desired items, actions, and cessation of non-preferred activities across 3 settings with 80% accuracy over 5 consecutive sessions.",
+      "baseline_performance": "Client used single-word mands for 12 items with gestural prompts in clinic setting only",
+      "current_performance": "Client independently mands using carrier phrase 'I want ___' for 25+ items across 2 settings; 2-word action mands at 55%",
+      "target_criterion": "80% accuracy across 5 consecutive sessions in 3 settings",
+      "status": "in progress",
+      "modification_rationale": null,
+      "related_targets": [
+        "Mands for missing items using carrier phrase 'I want ___'",
+        "Mands for actions using 2-word phrases"
+      ]
+    },
+    {
+      "goal_number": 2,
+      "goal_area": "Social Skills",
+      "goal_statement": "Client will engage in reciprocal play interactions with a peer for 5 minutes, including turn-taking and joint attention, with no more than 1 adult prompt per interaction across 3 consecutive opportunities.",
+      "baseline_performance": "Client engaged in solitary play only; no peer-directed social initiations observed",
+      "current_performance": "Client engages in parallel play for 3+ minutes; responds to joint attention at 60%; initiates joint attention at 20%",
+      "target_criterion": "5 minutes reciprocal play with ≤1 prompt across 3 consecutive opportunities",
+      "status": "in progress",
+      "modification_rationale": null,
+      "related_targets": [
+        "Parallel play alongside peer for 3 minutes without disruptive behavior",
+        "Initiates joint attention by showing or pointing to items of interest"
+      ]
+    },
+    {
+      "goal_number": 3,
+      "goal_area": "Behavior Reduction",
+      "goal_statement": "Client will reduce aggression to fewer than 1.0 episodes per hour across all settings for 4 consecutive weeks, using functionally equivalent replacement behaviors.",
+      "baseline_performance": "Aggression at 8.3 episodes per hour, dual-maintained by escape and tangible access",
+      "current_performance": "Aggression at 2.7 episodes per hour, 67% reduction from baseline",
+      "target_criterion": "<1.0 episodes per hour for 4 consecutive weeks across all settings",
+      "status": "in progress",
+      "modification_rationale": null,
+      "related_targets": ["Aggression"]
+    },
+    {
+      "goal_number": 4,
+      "goal_area": "Adaptive Behavior",
+      "goal_statement": "Client will independently complete 5 daily living skill routines (hand washing, teeth brushing, putting on shoes, putting on coat, cleaning up toys) with no more than visual schedule support.",
+      "baseline_performance": "Client completed 0 of 5 routines independently; required full physical prompting for all",
+      "current_performance": "Client independently completes hand washing and imitation tasks; teeth brushing at 60%; shoes and coat not yet introduced",
+      "target_criterion": "5 of 5 routines with visual schedule support only",
+      "status": "modified",
+      "modification_rationale": "Original goal included 7 routines; modified to 5 highest-priority routines after team discussion with caregivers. Shoes and coat deferred to next auth period to prioritize hygiene routines and safety skills.",
+      "related_targets": [
+        "Independent hand washing with visual schedule support",
+        "Tolerates teeth brushing for 60 seconds without crying or turning head"
+      ]
+    }
+  ],
+  "caregiver_training": {
+    "total_sessions": 14,
+    "topics_covered": [
+      "Functional Communication Training implementation at home",
+      "Antecedent strategies for aggression prevention",
+      "3-step prompting hierarchy for manding",
+      "Visual schedule creation and use for daily routines",
+      "Data collection on behavior frequency (simplified tally method)",
+      "Naturalistic teaching strategies during mealtimes and play",
+      "Response blocking for aggression — safety procedures",
+      "Generalization strategies across home and community settings",
+      "Toilet training readiness assessment and initial protocol"
+    ],
+    "caregiver_skill_acquisition": "Primary caregiver (mother) demonstrates FCT implementation with 82% fidelity and correct use of 3-step prompting hierarchy with 88% fidelity. Father participates in alternate sessions and demonstrates prompting at 75% fidelity. Both caregivers can independently implement visual schedules for hand washing and mealtimes.",
+    "barriers_to_participation": "Father's rotating work schedule limits attendance to every other session. Family illness (October) resulted in 4 cancelled sessions. Language barrier — sessions conducted in English with occasional Spanish interpretation; bilingual materials provided."
+  },
+  "discharge_plan": {
+    "measurable_criteria": [
+      "Aggression below 1.0 episodes per hour for 4 consecutive weeks across all settings",
+      "Elopement below 0.3 episodes per hour for 4 consecutive weeks",
+      "Vocal stereotypy below 20% of intervals during structured instruction",
+      "Mastery of 80% of current skill acquisition targets with generalization across 3 settings",
+      "Caregiver implementation fidelity above 90% for FCT and prompting procedures",
+      "Vineland-3 Adaptive Behavior Composite score at or above 70 (current: 62)"
+    ],
+    "estimated_discharge_date": null,
+    "transition_plan": "Step-down plan: Phase 1 — reduce to 20 hours/week direct service with maintained supervision. Phase 2 — reduce to 12 hours/week focused on social skills and community integration. Phase 3 — transition to consultation model (5 hours/week) with monthly BCBA check-ins. Final transition to school-based services with IEP consultation.",
+    "current_discharge_readiness": "Client has met 0 of 6 discharge criteria. Substantial progress on aggression (67% reduction) and elopement (74% reduction) but not yet at criterion levels. Continued intensive services strongly recommended."
+  },
+  "requested_hours_by_code": {
+    "97153": 24,
+    "97155": 4,
+    "97156": 2,
+    "97151": 1
+  },
+  "clinical_justification_for_hours": "Client's Level 2 ASD diagnosis with co-occurring mixed receptive-expressive language disorder necessitates continued intensive intervention. While significant progress has been made (67% reduction in aggression, 74% reduction in elopement, 5 of 10 skill targets mastered), the client has met 0 of 6 discharge criteria. Ongoing safety concerns (aggression at 2.7/hr), core ASD deficits in joint attention (20%) and social reciprocity, and the need for continued caregiver training support the requested intensity. The Vineland-3 ABC of 62 (1st percentile) confirms substantial adaptive behavior deficits requiring intensive intervention.",
+  "confidence_notes": [
+    "VB-MAPP previous scores not available in document — previous_date listed but scores may have been in a separate report",
+    "CARS-2 scoring: raw score of 35.5 places client in 'mild-to-moderate autism' range per manual cutoffs"
+  ],
+  "missing_fields": []
+}
