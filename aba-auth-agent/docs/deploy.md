@@ -31,18 +31,27 @@ You need a signed BAA with every vendor that touches PHI:
 
 | Vendor | Handles PHI? | BAA Available? | Notes |
 |--------|-------------|----------------|-------|
-| **Anthropic** | Yes — progress report text sent to Claude API | Yes — via AWS Bedrock or Google Cloud Vertex AI | Direct Anthropic API does **not** offer a BAA. You must route through Bedrock or Vertex. |
-| **AWS** | Yes — if hosting the app on AWS | Yes — automatic for HIPAA-eligible services | Enable HIPAA-eligible services in your AWS account |
-| **Google Cloud** | Yes — if hosting on GCP | Yes — via GCP BAA | Sign via Cloud Console |
-| **Azure** | Yes — if hosting on Azure | Yes — via Microsoft BAA | Sign via Azure Trust Center |
+| **Anthropic (direct API)** | Yes — progress report text sent to Claude API | **Yes** — contact Anthropic sales | Requires sales engagement, zero data retention, and HIPAA-ready service qualification. See [Anthropic BAA docs](https://privacy.claude.com/en/articles/8114513-business-associate-agreements-baa-for-commercial-customers). |
+| **AWS Bedrock** | Yes — Claude via Bedrock | Yes — automatic for HIPAA-eligible services | Enable HIPAA-eligible services in your AWS account |
+| **Google Cloud Vertex AI** | Yes — Claude via Vertex | Yes — via GCP BAA | Sign via Cloud Console |
+| **Azure** | Yes — Claude via Azure | Yes — via Microsoft BAA | Sign via Azure Trust Center |
+| **AWS / GCP / Azure (hosting)** | Yes — if hosting the app | Yes | BAA covers both Claude access and infrastructure |
 | **Streamlit Community Cloud** | Yes | **No** | Not suitable for production with PHI |
 | **Railway / Render / Fly.io** | Yes | **No** | Not suitable for production with PHI |
 
-**Bottom line:** For production with real patient data, you must use AWS, GCP, or Azure — and route Claude API calls through Bedrock or Vertex AI.
+**Three paths to a HIPAA-compliant Claude API:**
 
-### 2. Switch from Direct API to Bedrock or Vertex
+1. **Anthropic direct API with BAA** — Contact [Anthropic sales](https://www.anthropic.com/contact-sales) to request a BAA for their HIPAA-ready API service. This requires zero data retention and a qualification process. Simplest option if approved — no code changes needed, the app already uses `anthropic.Anthropic()`.
 
-The app currently uses `anthropic.Anthropic()` (direct API). For production, change to one of:
+2. **AWS Bedrock** — Claude is available as a Bedrock foundation model, covered under your AWS BAA. Requires a one-line code change.
+
+3. **Google Cloud Vertex AI** or **Azure** — Same story, Claude available through these providers under their respective BAAs.
+
+For a small clinic, option 1 (direct Anthropic BAA) is the fastest path if you can get approved. For organizations already on AWS/GCP/Azure, option 2 or 3 avoids a separate vendor relationship.
+
+### 2. Claude API Configuration
+
+The app currently uses `anthropic.Anthropic()` (direct API). If you get a BAA directly from Anthropic, no code change is needed. If you route through a cloud provider, change the client constructor:
 
 **AWS Bedrock:**
 ```python
@@ -64,7 +73,7 @@ client = anthropic.AnthropicVertex(
 )
 ```
 
-Both are drop-in replacements — same `client.messages.create()` interface, same model names. The only change is the client constructor.
+All three options are drop-in compatible — same `client.messages.create()` interface, same model names. The only change is the client constructor.
 
 ### 3. Encryption
 
@@ -361,8 +370,8 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env — for Lightsail, you can use the direct Anthropic API key
-# if you accept the risk, or set up Bedrock credentials
+# Edit .env — use your Anthropic API key (with signed BAA)
+# or configure Bedrock credentials instead
 
 # Create systemd service
 sudo tee /etc/systemd/system/aba-auth-agent.service > /dev/null <<'EOF'
@@ -452,7 +461,7 @@ sudo chmod +x /etc/cron.daily/backup-aba-db
 
 | Factor | AWS ECS | GCP Cloud Run | VPS |
 |--------|---------|---------------|-----|
-| HIPAA compliance | Full (Bedrock BAA) | Full (Vertex BAA) | Partial (need direct API BAA) |
+| HIPAA compliance | Full (Bedrock BAA) | Full (Vertex BAA) | Full (with Anthropic direct BAA) |
 | Setup complexity | High | Medium | Low |
 | Monthly cost | ~$70-100 | ~$65-90 | ~$20-45 |
 | Maintenance burden | Low (managed) | Low (managed) | Medium (you patch the OS) |
