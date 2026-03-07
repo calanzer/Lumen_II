@@ -1,6 +1,6 @@
-"""Extract structured clinical data from ABA progress report PDFs using Claude API.
+"""Extract structured clinical data from ABA progress reports (PDF or DOCX) using Claude API.
 
-Pipeline: PyMuPDF (classify) -> Claude Sonnet (extract to JSON) -> pdfplumber (validate tables) -> Pydantic (enforce schema)
+Pipeline: classify -> Claude Sonnet (extract to JSON) -> cross-validate tables -> Pydantic (enforce schema)
 """
 
 import anthropic
@@ -8,9 +8,11 @@ import base64
 import json
 import re
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 
 import pdfplumber
+from docx import Document
 
 from schemas.clinical_data import ExtractedClinicalData
 
@@ -43,12 +45,67 @@ def _extract_tables_with_pdfplumber(pdf_bytes: bytes) -> list[list[list[str]]]:
     return tables
 
 
+def _extract_tables_from_docx(docx_bytes: bytes) -> list[list[list[str]]]:
+    """
+    Extract all tables from a DOCX file.
+    Returns same format as _extract_tables_with_pdfplumber.
+    """
+    doc = Document(BytesIO(docx_bytes))
+    tables = []
+    for table in doc.tables:
+        rows = []
+        for row in table.rows:
+            cells = [cell.text.strip() for cell in row.cells]
+            if any(cells):  # skip empty rows
+                rows.append(cells)
+        if rows:
+            tables.append(rows)
+    return tables
+
+
+def _extract_text_from_docx(docx_bytes: bytes) -> str:
+    """
+    Extract full text content from a DOCX file, including table data.
+    Preserves structure with section headers and table formatting.
+    """
+    doc = Document(BytesIO(docx_bytes))
+    parts = []
+
+    for element in doc.element.body:
+        tag = element.tag.split("}")[-1] if "}" in element.tag else element.tag
+
+        if tag == "p":
+            # Paragraph
+            para = element
+            text = "".join(node.text or "" for node in para.iter() if node.text)
+            if text.strip():
+                parts.append(text.strip())
+
+        elif tag == "tbl":
+            # Table — render as pipe-delimited for clarity to the LLM
+            for tr in element.iter():
+                tr_tag = tr.tag.split("}")[-1] if "}" in tr.tag else tr.tag
+                if tr_tag == "tr":
+                    cells = []
+                    for tc in tr.iter():
+                        tc_tag = tc.tag.split("}")[-1] if "}" in tc.tag else tc.tag
+                        if tc_tag == "tc":
+                            cell_text = "".join(
+                                node.text or "" for node in tc.iter() if node.text
+                            ).strip()
+                            cells.append(cell_text)
+                    if cells:
+                        parts.append(" | ".join(cells))
+
+    return "\n".join(parts)
+
+
 def _cross_validate_tables(
     extracted: dict,
     tables: list[list[list[str]]],
 ) -> list[str]:
     """
-    Cross-validate Claude's extraction against pdfplumber's deterministic table extraction.
+    Cross-validate Claude's extraction against deterministic table extraction.
     Checks that critical numeric values from tables appear in the extracted data.
 
     Returns list of discrepancy notes to add to confidence_notes.
@@ -114,20 +171,68 @@ def _strip_markdown_fences(text: str) -> str:
     return text.strip()
 
 
-def extract_clinical_data(pdf_bytes: bytes, filename: str) -> ExtractedClinicalData:
-    """
-    Send PDF to Claude API for structured clinical data extraction,
-    then cross-validate tabular data with pdfplumber.
+def _build_content_blocks_for_pdf(pdf_bytes: bytes) -> list[dict]:
+    """Build Claude API content blocks for a PDF document."""
+    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
+    return [
+        {
+            "type": "document",
+            "source": {
+                "type": "base64",
+                "media_type": "application/pdf",
+                "data": pdf_b64,
+            },
+        },
+    ]
 
-    Uses Claude's native PDF support (base64-encoded document block).
+
+def _build_content_blocks_for_docx(docx_bytes: bytes) -> list[dict]:
+    """Build Claude API content blocks for a DOCX document (sent as extracted text)."""
+    text = _extract_text_from_docx(docx_bytes)
+    return [
+        {
+            "type": "text",
+            "text": (
+                "<document_content format=\"docx_extracted_text\">\n"
+                f"{text}\n"
+                "</document_content>"
+            ),
+        },
+    ]
+
+
+def extract_clinical_data(file_bytes: bytes, filename: str) -> ExtractedClinicalData:
+    """
+    Send document (PDF or DOCX) to Claude API for structured clinical data extraction,
+    then cross-validate tabular data.
+
+    For PDFs: uses Claude's native PDF support (base64-encoded document block).
+    For DOCX: extracts text and tables, sends as structured text content.
+
     Returns validated Pydantic model.
     """
     client = anthropic.Anthropic()
-
     system_prompt = load_prompt("extraction_system.txt")
 
-    # Encode PDF as base64 for Claude's document processing
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
+    is_docx = filename.lower().endswith(".docx")
+
+    # Build content blocks based on file type
+    if is_docx:
+        doc_blocks = _build_content_blocks_for_docx(file_bytes)
+    else:
+        doc_blocks = _build_content_blocks_for_pdf(file_bytes)
+
+    instruction_block = {
+        "type": "text",
+        "text": (
+            "Extract all clinical data from this ABA progress report into the JSON schema. "
+            "Be thorough — capture every skill acquisition target, every behavior reduction target, "
+            "every assessment score, and all hours utilization data. "
+            "If a field is not present in the document, set it to null. "
+            "If you are uncertain about a value, include it in confidence_notes. "
+            "Respond with ONLY valid JSON matching the schema — no markdown, no explanation."
+        ),
+    }
 
     # Use prompt caching on the system prompt (large, reused across calls)
     message = client.messages.create(
@@ -143,27 +248,7 @@ def extract_clinical_data(pdf_bytes: bytes, filename: str) -> ExtractedClinicalD
         messages=[
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": pdf_b64,
-                        },
-                    },
-                    {
-                        "type": "text",
-                        "text": (
-                            "Extract all clinical data from this ABA progress report into the JSON schema. "
-                            "Be thorough — capture every skill acquisition target, every behavior reduction target, "
-                            "every assessment score, and all hours utilization data. "
-                            "If a field is not present in the document, set it to null. "
-                            "If you are uncertain about a value, include it in confidence_notes. "
-                            "Respond with ONLY valid JSON matching the schema — no markdown, no explanation."
-                        ),
-                    },
-                ],
+                "content": doc_blocks + [instruction_block],
             }
         ],
     )
@@ -177,19 +262,22 @@ def extract_clinical_data(pdf_bytes: bytes, filename: str) -> ExtractedClinicalD
     data["extraction_timestamp"] = datetime.utcnow().isoformat()
     data["extraction_model"] = "claude-sonnet-4-20250514"
 
-    # Cross-validate with pdfplumber table extraction
+    # Cross-validate with deterministic table extraction
     try:
-        tables = _extract_tables_with_pdfplumber(pdf_bytes)
+        if is_docx:
+            tables = _extract_tables_from_docx(file_bytes)
+        else:
+            tables = _extract_tables_with_pdfplumber(file_bytes)
         if tables:
             table_discrepancies = _cross_validate_tables(data, tables)
             if table_discrepancies:
                 existing_notes = data.get("confidence_notes", []) or []
                 data["confidence_notes"] = existing_notes + table_discrepancies
     except Exception:
-        # pdfplumber validation is best-effort; don't block extraction on failure
+        # Table validation is best-effort; don't block extraction on failure
         existing_notes = data.get("confidence_notes", []) or []
         data["confidence_notes"] = existing_notes + [
-            "pdfplumber table cross-validation could not be performed."
+            "Table cross-validation could not be performed."
         ]
 
     # Validate against Pydantic schema

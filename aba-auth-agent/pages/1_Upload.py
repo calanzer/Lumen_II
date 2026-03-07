@@ -1,11 +1,11 @@
-"""Page 1: PDF Upload and Extraction"""
+"""Page 1: Document Upload (PDF or DOCX) and Extraction"""
 
 import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from pipeline.classifier import classify_pdf
+from pipeline.classifier import classify_document
 from pipeline.extractor import extract_clinical_data
 from pipeline.validator import validate_completeness
 
@@ -13,44 +13,47 @@ st.header("Upload Progress Report")
 
 
 @st.cache_data(show_spinner=False)
-def cached_classify(pdf_bytes: bytes) -> dict:
-    """Cache PDF classification to avoid re-analysis on page reruns."""
-    return classify_pdf(pdf_bytes)
+def cached_classify(file_bytes: bytes, filename: str) -> dict:
+    """Cache document classification to avoid re-analysis on page reruns."""
+    return classify_document(file_bytes, filename)
 
 
 @st.cache_data(show_spinner=False)
-def cached_extract(pdf_bytes: bytes, filename: str):
+def cached_extract(file_bytes: bytes, filename: str):
     """Cache extraction results to avoid redundant API calls on page reruns."""
-    return extract_clinical_data(pdf_bytes, filename)
+    return extract_clinical_data(file_bytes, filename)
 
 
 uploaded_file = st.file_uploader(
-    "Upload an ABA progress report PDF",
-    type=["pdf"],
-    help="Supported: CentralReach, Catalyst, Rethink, or any standard ABA progress report PDF."
+    "Upload an ABA progress report",
+    type=["pdf", "docx"],
+    help="Supported formats: PDF and DOCX. Works with CentralReach, Catalyst, Rethink, or any standard ABA progress report."
 )
 
 if uploaded_file:
-    pdf_bytes = uploaded_file.read()
-    st.session_state.pdf_bytes = pdf_bytes
-    st.success(f"Uploaded: {uploaded_file.name} ({len(pdf_bytes) / 1024:.0f} KB)")
+    file_bytes = uploaded_file.read()
+    st.session_state.pdf_bytes = file_bytes  # key kept for session compat
+    st.session_state.uploaded_filename = uploaded_file.name
+    st.success(f"Uploaded: {uploaded_file.name} ({len(file_bytes) / 1024:.0f} KB)")
 
     # Classify
-    with st.spinner("Analyzing PDF..."):
-        classification = cached_classify(pdf_bytes)
+    with st.spinner("Analyzing document..."):
+        classification = cached_classify(file_bytes, uploaded_file.name)
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Pages", classification["page_count"])
-    col2.metric("Type", "Digital" if classification["is_native_digital"] else "Scanned")
+    file_type_label = classification.get("file_type", "pdf").upper()
+    is_digital = classification["is_native_digital"]
+    col2.metric("Type", f"{file_type_label} ({'Digital' if is_digital else 'Scanned'})")
     col3.metric("Source", classification["estimated_source"] or "Unknown")
 
-    if not classification["is_native_digital"]:
+    if not is_digital:
         st.warning("This appears to be a scanned PDF. Extraction quality may be reduced.")
 
     if st.button("Extract Clinical Data", type="primary"):
         with st.spinner("Extracting clinical data via Claude API... (this takes 30-60 seconds)"):
             try:
-                clinical_data = cached_extract(pdf_bytes, uploaded_file.name)
+                clinical_data = cached_extract(file_bytes, uploaded_file.name)
                 st.session_state.clinical_data = clinical_data
 
                 # Run validation
