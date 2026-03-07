@@ -308,6 +308,16 @@ def save_export(period_id: str):
         )
 
 
+def mark_submitted(period_id: str):
+    """Mark an auth period as submitted to the payor."""
+    now = _now()
+    with get_db() as conn:
+        conn.execute(
+            """UPDATE auth_periods SET status = 'submitted', updated_at = ? WHERE id = ?""",
+            (now, period_id),
+        )
+
+
 def update_period_notes(period_id: str, notes: str):
     """Save BCBA notes on an auth period."""
     with get_db() as conn:

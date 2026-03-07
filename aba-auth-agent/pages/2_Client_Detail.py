@@ -120,7 +120,10 @@ for p in periods:
             height=68,
         )
         if notes != (p.get("notes") or ""):
-            update_period_notes(p["id"], notes)
+            if st.button("Save Notes", key=f"save_notes_{p['id']}", type="secondary"):
+                update_period_notes(p["id"], notes)
+                st.toast("Notes saved.", icon="✅")
+                st.rerun()
 
         # Action buttons
         st.divider()
