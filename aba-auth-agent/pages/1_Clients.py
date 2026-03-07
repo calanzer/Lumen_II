@@ -105,8 +105,22 @@ for c in clients:
                 st.session_state.selected_client_id = c["id"]
                 st.switch_page("pages/3_Upload.py")
         with btn_col3:
-            if st.button("Archive", key=f"archive_{c['id']}", use_container_width=True, type="secondary"):
-                update_client(c["id"], status="discharged")
-                st.rerun()
+            confirm_key = f"confirm_archive_{c['id']}"
+            if st.session_state.get(confirm_key):
+                st.warning(f"Archive **{c['display_name']}**?")
+                yes_col, no_col = st.columns(2)
+                with yes_col:
+                    if st.button("Yes, archive", key=f"yes_archive_{c['id']}", type="primary", use_container_width=True):
+                        update_client(c["id"], status="discharged")
+                        st.session_state.pop(confirm_key, None)
+                        st.rerun()
+                with no_col:
+                    if st.button("Cancel", key=f"cancel_archive_{c['id']}", use_container_width=True):
+                        st.session_state.pop(confirm_key, None)
+                        st.rerun()
+            else:
+                if st.button("Archive", key=f"archive_{c['id']}", use_container_width=True, type="secondary"):
+                    st.session_state[confirm_key] = True
+                    st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)

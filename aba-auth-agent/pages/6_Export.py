@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from data.store import get_auth_period, save_export
+from data.store import get_auth_period, save_export, mark_submitted
 from pipeline.exporter import export_to_docx, list_available_payors
 from ui_style import (
     inject_custom_css,
@@ -167,3 +167,15 @@ if st.button("Generate Word Document", type="primary", disabled=not confirmed, u
         except Exception as e:
             st.error(f"Export failed: {e}")
             st.exception(e)
+
+# Post-export: mark as submitted
+if period_id:
+    period = get_auth_period(period_id)
+    if period and period.get("status") == "exported":
+        st.divider()
+        st.subheader("After Submitting to Payor")
+        st.caption("Once you've submitted this document to the payor, mark it here to update your dashboard.")
+        if st.button("Mark as Submitted to Payor", use_container_width=True):
+            mark_submitted(period_id)
+            st.success("Status updated to Submitted.")
+            st.rerun()

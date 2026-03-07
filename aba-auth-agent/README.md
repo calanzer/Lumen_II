@@ -17,7 +17,7 @@ cp .env.example .env
 # Edit .env and add your Anthropic API key
 
 # Run the app
-streamlit run app.py
+python -m streamlit run app.py
 ```
 
 The app will open at `http://localhost:8501`.
@@ -104,4 +104,4 @@ Tests validate Pydantic schemas and the completeness validator. Extraction and g
 
 ## HIPAA Notice
 
-Use **only de-identified** progress reports during testing. Remove all 18 HIPAA identifiers before processing through the Claude API. For production use, deploy via AWS Bedrock with a signed BAA.
+Use **only de-identified** progress reports during testing. Remove all 18 HIPAA identifiers before processing through the Claude API. For production use with PHI, obtain a BAA from Anthropic (direct API) or route through AWS Bedrock / Google Vertex AI / Azure under their respective BAAs. See `docs/deploy.md` for full deployment guidance.

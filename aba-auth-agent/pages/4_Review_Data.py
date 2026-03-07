@@ -36,20 +36,28 @@ sidebar_trust_badges()
 
 branded_header("Review & Edit Extracted Data", "Verify clinical data before generating the reauthorization narrative.")
 
-# Load from DB if available, fallback to session state
+# Load from DB only when switching periods — not on every rerun
 period_id = st.session_state.get("selected_period_id")
-if period_id:
+_loaded_period = st.session_state.get("_review_loaded_period_id")
+
+if period_id and period_id != _loaded_period:
     period = get_auth_period(period_id)
     if period and period.get("extracted_data_parsed"):
         st.session_state.clinical_data = period["extracted_data_parsed"]
         if period.get("validation_result_parsed"):
             st.session_state.validation = period["validation_result_parsed"]
+    st.session_state._review_loaded_period_id = period_id
 
 if st.session_state.get("clinical_data") is None:
     st.warning("No data extracted yet. Go to **Upload** first.")
     st.stop()
 
 data: ExtractedClinicalData = st.session_state.clinical_data
+
+# Top save bar — always visible
+_top_save_col1, _top_save_col2 = st.columns([3, 1])
+with _top_save_col2:
+    _top_save = st.button("Save All Changes", type="primary", use_container_width=True, key="save_top")
 
 
 def _date_to_value(d):
@@ -181,14 +189,23 @@ for i, a in enumerate(data.assessments):
 
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            val = st.number_input("Raw Score", value=a.raw_score if a.raw_score is not None else 0.0, format="%.1f", key=f"assess_raw_{i}")
-            a.raw_score = val if val != 0.0 else None
+            raw_str = st.text_input(
+                "Raw Score", value=str(a.raw_score) if a.raw_score is not None else "",
+                placeholder="Not assessed", key=f"assess_raw_{i}",
+            )
+            a.raw_score = float(raw_str) if raw_str.strip() else None
         with col2:
-            val = st.number_input("Standard Score", value=a.standard_score if a.standard_score is not None else 0.0, format="%.1f", key=f"assess_std_{i}")
-            a.standard_score = val if val != 0.0 else None
+            std_str = st.text_input(
+                "Standard Score", value=str(a.standard_score) if a.standard_score is not None else "",
+                placeholder="Not assessed", key=f"assess_std_{i}",
+            )
+            a.standard_score = float(std_str) if std_str.strip() else None
         with col3:
-            val = st.number_input("Percentile", value=a.percentile if a.percentile is not None else 0.0, min_value=0.0, max_value=100.0, format="%.1f", key=f"assess_pct_{i}")
-            a.percentile = val if val != 0.0 else None
+            pct_str = st.text_input(
+                "Percentile", value=str(a.percentile) if a.percentile is not None else "",
+                placeholder="Not assessed", key=f"assess_pct_{i}",
+            )
+            a.percentile = float(pct_str) if pct_str.strip() else None
         with col4:
             val = st.text_input("Age Equivalent", value=a.age_equivalent or "", key=f"assess_age_eq_{i}")
             a.age_equivalent = val or None
@@ -206,8 +223,11 @@ for i, a in enumerate(data.assessments):
 
         col1, col2 = st.columns(2)
         with col1:
-            val = st.number_input("Previous Score", value=a.previous_score if a.previous_score is not None else 0.0, format="%.1f", key=f"assess_prev_{i}")
-            a.previous_score = val if val != 0.0 else None
+            prev_str = st.text_input(
+                "Previous Score", value=str(a.previous_score) if a.previous_score is not None else "",
+                placeholder="Not assessed", key=f"assess_prev_{i}",
+            )
+            a.previous_score = float(prev_str) if prev_str.strip() else None
         with col2:
             a.previous_date = st.date_input(
                 "Previous Date", value=_date_to_value(a.previous_date), key=f"assess_prev_date_{i}",
@@ -536,9 +556,12 @@ st.divider()
 # ===================================================================
 col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
-    if st.button("Save All Changes", type="primary", use_container_width=True):
-        _save_all()
-        st.rerun()
+    _bottom_save = st.button("Save All Changes", type="primary", use_container_width=True, key="save_bottom")
+
+# Respond to either top or bottom save button
+if _top_save or _bottom_save:
+    _save_all()
+    st.rerun()
 
 with col2:
     with st.popover("Raw JSON Editor"):

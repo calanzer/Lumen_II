@@ -62,33 +62,48 @@ if period_id and client_id:
     prior_period = get_prior_period(client_id, period_id)
 
 if prior_period and prior_period.get("extracted_data_parsed"):
-    with st.expander("Prior Period Comparison", expanded=False):
-        prior_data = prior_period["extracted_data_parsed"]
-        st.caption(f"Comparing against: {prior_period['period_start']} to {prior_period['period_end']}")
+    st.markdown(
+        '<div class="section-header">'
+        '<span class="section-title">Progress Since Prior Authorization</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption(f"Comparing against: {prior_period['period_start']} to {prior_period['period_end']}")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown(
-                '<div style="background:#F0F7F9; padding:12px; border-radius:8px;">'
-                '<strong>Prior Period</strong></div>',
-                unsafe_allow_html=True,
-            )
-            st.write(f"- Skill targets: {len(prior_data.skill_acquisition_targets)} ({sum(1 for t in prior_data.skill_acquisition_targets if t.is_mastered)} mastered)")
-            st.write(f"- Behaviors: {len(prior_data.behavior_reduction_targets)}")
-            for b in prior_data.behavior_reduction_targets:
-                if b.current_value is not None:
-                    st.write(f"  - {b.behavior_name}: {b.current_value} {b.unit}")
-        with col2:
-            st.markdown(
-                '<div style="background:#ECFDF5; padding:12px; border-radius:8px;">'
-                '<strong>Current Period</strong></div>',
-                unsafe_allow_html=True,
-            )
-            st.write(f"- Skill targets: {len(data.skill_acquisition_targets)} ({sum(1 for t in data.skill_acquisition_targets if t.is_mastered)} mastered)")
-            st.write(f"- Behaviors: {len(data.behavior_reduction_targets)}")
-            for b in data.behavior_reduction_targets:
-                if b.current_value is not None:
-                    st.write(f"  - {b.behavior_name}: {b.current_value} {b.unit}")
+    prior_data = prior_period["extracted_data_parsed"]
+
+    # Key deltas as metrics
+    prior_mastered = sum(1 for t in prior_data.skill_acquisition_targets if t.is_mastered)
+    current_mastered = sum(1 for t in data.skill_acquisition_targets if t.is_mastered)
+
+    delta_col1, delta_col2, delta_col3 = st.columns(3)
+    with delta_col1:
+        st.metric(
+            "Skills Mastered",
+            current_mastered,
+            delta=f"+{current_mastered - prior_mastered}" if current_mastered > prior_mastered else str(current_mastered - prior_mastered),
+        )
+    with delta_col2:
+        st.metric("Current Skill Targets", len(data.skill_acquisition_targets))
+    with delta_col3:
+        st.metric("Current Behavior Targets", len(data.behavior_reduction_targets))
+
+    # Behavior reduction comparison
+    prior_behaviors = {b.behavior_name: b for b in prior_data.behavior_reduction_targets}
+    behavior_changes = []
+    for b in data.behavior_reduction_targets:
+        prior_b = prior_behaviors.get(b.behavior_name)
+        if prior_b and prior_b.current_value is not None and b.current_value is not None and prior_b.current_value > 0:
+            pct_change = ((b.current_value - prior_b.current_value) / prior_b.current_value) * 100
+            behavior_changes.append((b.behavior_name, prior_b.current_value, b.current_value, pct_change, b.unit))
+
+    if behavior_changes:
+        st.write("**Behavior Trends:**")
+        for name, prior_val, curr_val, pct, unit in behavior_changes:
+            direction = "decrease" if pct < 0 else "increase"
+            st.write(f"- **{name}**: {prior_val} \u2192 {curr_val} {unit} ({abs(pct):.0f}% {direction})")
+
+    st.divider()
 
 # Check validation status
 validation = st.session_state.get("validation", {})
