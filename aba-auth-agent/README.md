@@ -17,7 +17,7 @@ cp .env.example .env
 # Edit .env and add your Anthropic API key
 
 # Run the app
-streamlit run app.py
+python -m streamlit run app.py
 ```
 
 The app will open at `http://localhost:8501`.
