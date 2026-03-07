@@ -5,3 +5,4 @@ __pycache__/
 uploads/
 outputs/
 .venv/
+data/aba_auth.db

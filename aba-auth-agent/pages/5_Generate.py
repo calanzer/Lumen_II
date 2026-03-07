@@ -1,7 +1,8 @@
-"""Page 3: Generate reauthorization narrative with BCBA review.
+"""Page 5: Generate reauthorization narrative with BCBA review.
 
 Provides side-by-side view of source data and generated narrative for each section.
-BCBAs can edit every narrative section directly. Edits persist to session state.
+BCBAs can edit every narrative section directly. Edits persist to DB.
+Shows prior period data for comparison when available.
 """
 
 import json
@@ -11,16 +12,56 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from data.store import get_auth_period, get_prior_period, save_narrative
 from pipeline.generator import generate_narrative, validate_narrative_against_source
 from schemas.narrative import AnthemReauthNarrative
 
 st.header("Generate Reauthorization Narrative")
+
+# Load from DB
+period_id = st.session_state.get("selected_period_id")
+client_id = st.session_state.get("selected_client_id")
+
+if period_id:
+    period = get_auth_period(period_id)
+    if period and period.get("extracted_data_parsed"):
+        st.session_state.clinical_data = period["extracted_data_parsed"]
+        if period.get("validation_result_parsed"):
+            st.session_state.validation = period["validation_result_parsed"]
+    if period and period.get("narrative_data_parsed"):
+        st.session_state.narrative = period["narrative_data_parsed"]
 
 if st.session_state.get("clinical_data") is None:
     st.warning("No data extracted yet. Go to **Upload** first.")
     st.stop()
 
 data = st.session_state.clinical_data
+
+# Prior period comparison
+prior_period = None
+if period_id and client_id:
+    prior_period = get_prior_period(client_id, period_id)
+
+if prior_period and prior_period.get("extracted_data_parsed"):
+    with st.expander("Prior Period Comparison", expanded=False):
+        prior_data = prior_period["extracted_data_parsed"]
+        st.caption(f"Comparing against: {prior_period['period_start']} to {prior_period['period_end']}")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("**Prior Period:**")
+            st.write(f"- Skill targets: {len(prior_data.skill_acquisition_targets)} ({sum(1 for t in prior_data.skill_acquisition_targets if t.is_mastered)} mastered)")
+            st.write(f"- Behaviors: {len(prior_data.behavior_reduction_targets)}")
+            for b in prior_data.behavior_reduction_targets:
+                if b.current_value is not None:
+                    st.write(f"  - {b.behavior_name}: {b.current_value} {b.unit}")
+        with col2:
+            st.write("**Current Period:**")
+            st.write(f"- Skill targets: {len(data.skill_acquisition_targets)} ({sum(1 for t in data.skill_acquisition_targets if t.is_mastered)} mastered)")
+            st.write(f"- Behaviors: {len(data.behavior_reduction_targets)}")
+            for b in data.behavior_reduction_targets:
+                if b.current_value is not None:
+                    st.write(f"  - {b.behavior_name}: {b.current_value} {b.unit}")
 
 # Check validation status
 validation = st.session_state.get("validation", {})
@@ -35,6 +76,9 @@ if st.button("Generate Anthem Blue Cross Narrative", type="primary"):
         try:
             narrative = generate_narrative(data)
             st.session_state.narrative = narrative
+            # Save to DB
+            if period_id:
+                save_narrative(period_id, narrative)
             st.success(f"Narrative generated. Confidence: {narrative.overall_confidence:.0%}")
         except Exception as e:
             st.error(f"Generation failed: {e}")
@@ -143,10 +187,8 @@ for field_name, display_name in sections:
                 key=f"edit_{field_name}",
                 label_visibility="collapsed",
             )
-            # Live-update the section content as the BCBA types
             section.content = edited
 
-            # Word count indicator
             word_count = len(edited.split())
             if word_count < 50:
                 st.caption(f"⚠ {word_count} words — may be too brief for payor")
@@ -167,11 +209,11 @@ st.markdown("---")
 col1, col2 = st.columns([2, 1])
 with col1:
     if st.button("Save All Edits", type="primary", use_container_width=True):
-        # Sections are already updated via live binding above.
-        # Re-assign to session to ensure persistence across reruns.
         st.session_state.narrative = narrative
+        if period_id:
+            save_narrative(period_id, narrative)
         st.toast("All narrative edits saved.", icon="✅")
         st.success("Edits saved. Navigate to **Export** to download as Word document.")
 
 with col2:
-    st.page_link("pages/4_Export.py", label="Continue to Export →", use_container_width=True)
+    st.page_link("pages/6_Export.py", label="Continue to Export →", use_container_width=True)

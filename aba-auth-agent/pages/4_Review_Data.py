@@ -1,7 +1,7 @@
-"""Page 2: Review and edit extracted clinical data.
+"""Page 4: Review and edit extracted clinical data.
 
 BCBAs can edit every field inline before generating the narrative.
-Changes are saved to session state and fed into the narrative generator.
+Changes are saved to both session state and the database.
 """
 
 import json
@@ -9,6 +9,7 @@ from datetime import date, datetime
 
 import streamlit as st
 
+from data.store import get_auth_period, save_clinical_data
 from schemas.clinical_data import (
     AssessmentType,
     BehaviorTrend,
@@ -17,6 +18,15 @@ from schemas.clinical_data import (
 )
 
 st.header("Review & Edit Extracted Data")
+
+# Load from DB if available, fallback to session state
+period_id = st.session_state.get("selected_period_id")
+if period_id:
+    period = get_auth_period(period_id)
+    if period and period.get("extracted_data_parsed"):
+        st.session_state.clinical_data = period["extracted_data_parsed"]
+        if period.get("validation_result_parsed"):
+            st.session_state.validation = period["validation_result_parsed"]
 
 if st.session_state.get("clinical_data") is None:
     st.warning("No data extracted yet. Go to **Upload** first.")
@@ -35,7 +45,7 @@ def _date_to_value(d):
 
 
 def _save_all():
-    """Rebuild and re-validate data, then save to session."""
+    """Rebuild, re-validate, save to session + DB."""
     try:
         dumped = data.model_dump(mode="json")
         updated = ExtractedClinicalData.model_validate(dumped)
@@ -44,6 +54,9 @@ def _save_all():
         from pipeline.validator import validate_completeness
         validation = validate_completeness(updated)
         st.session_state.validation = validation
+        # Persist to database
+        if period_id:
+            save_clinical_data(period_id, updated, validation)
         st.toast("All changes saved.", icon="✅")
     except Exception as e:
         st.error(f"Validation error: {e}")
@@ -503,4 +516,4 @@ with col2:
                 st.error(f"Invalid JSON: {e}")
 
 with col3:
-    st.page_link("pages/3_Generate.py", label="Continue to Generate →", use_container_width=True)
+    st.page_link("pages/5_Generate.py", label="Continue to Generate →", use_container_width=True)

@@ -1,13 +1,24 @@
-"""Page 4: Export narrative as Word document."""
+"""Page 6: Export narrative as Word document."""
 
 import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
+from data.store import get_auth_period, save_export
 from pipeline.exporter import export_to_docx, list_available_payors
 
 st.header("Export Reauthorization Document")
+
+# Load from DB
+period_id = st.session_state.get("selected_period_id")
+
+if period_id:
+    period = get_auth_period(period_id)
+    if period and period.get("extracted_data_parsed"):
+        st.session_state.clinical_data = period["extracted_data_parsed"]
+    if period and period.get("narrative_data_parsed"):
+        st.session_state.narrative = period["narrative_data_parsed"]
 
 if st.session_state.get("narrative") is None:
     st.warning("No narrative generated yet. Go to **Generate** first.")
@@ -34,7 +45,7 @@ col3.metric("Sections Needing Review", review_needed)
 
 if review_needed > 0:
     st.warning(
-        f"{review_needed} section(s) still contain [DATA NOT PROVIDED — CLINICIAN ACTION REQUIRED] placeholders. "
+        f"{review_needed} section(s) still need review. "
         "Ensure these are resolved before submitting to the payor."
     )
 
@@ -46,7 +57,7 @@ selected_payor = st.selectbox(
     "Choose the payor template for your Word document:",
     options=list(payor_options.keys()),
     format_func=lambda k: payor_options[k],
-    index=0,  # Default to Anthem Blue Cross CA
+    index=0,
 )
 
 if not payors[selected_payor]["template_exists"]:
@@ -75,6 +86,10 @@ if st.button("Generate Word Document", type="primary", disabled=not confirmed):
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             )
             st.success(f"Document ready: {filename}")
+
+            # Mark as exported in DB
+            if period_id:
+                save_export(period_id)
 
         except Exception as e:
             st.error(f"Export failed: {e}")
