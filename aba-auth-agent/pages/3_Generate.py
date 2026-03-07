@@ -1,7 +1,7 @@
 """Page 3: Generate reauthorization narrative with BCBA review.
 
-Provides side-by-side view of source data and generated narrative for each section,
-enabling BCBAs to verify accuracy against the original extraction.
+Provides side-by-side view of source data and generated narrative for each section.
+BCBAs can edit every narrative section directly. Edits persist to session state.
 """
 
 import json
@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from pipeline.generator import generate_narrative, validate_narrative_against_source
+from schemas.narrative import AnthemReauthNarrative
 
 st.header("Generate Reauthorization Narrative")
 
@@ -26,7 +27,7 @@ validation = st.session_state.get("validation", {})
 if not validation.get("is_complete", False):
     st.warning(
         f"Extracted data is incomplete (score: {validation.get('score', 0):.0%}). "
-        "Narrative will contain [DATA NOT PROVIDED — CLINICIAN ACTION REQUIRED] placeholders for missing data."
+        "Narrative will contain placeholders for missing data."
     )
 
 if st.button("Generate Anthem Blue Cross Narrative", type="primary"):
@@ -57,8 +58,11 @@ narrative = st.session_state.narrative
 
 # Display narrative sections for BCBA review with side-by-side source data
 st.markdown("---")
-st.subheader("BCBA Review — Side-by-Side Comparison")
-st.caption("This is an AI-generated draft. Source data is shown on the left for verification. Your clinical judgment takes precedence.")
+st.subheader("BCBA Review — Edit Narrative Sections")
+st.caption(
+    "Left: source data for verification. Right: AI-generated draft — **edit directly in the text boxes**. "
+    "Your clinical judgment takes precedence over AI output."
+)
 
 # Map sections to their relevant source data fields for side-by-side display
 SECTION_SOURCE_MAP = {
@@ -113,10 +117,9 @@ sections = [
     ("discharge_plan", "9. Discharge Plan"),
 ]
 
-edited_sections = {}
 for field_name, display_name in sections:
     section = getattr(narrative, field_name)
-    flag = "[REVIEW] " if section.requires_review else ""
+    flag = "⚠ " if section.requires_review else ""
     with st.expander(f"{flag}{display_name}", expanded=section.requires_review):
         if section.requires_review and section.review_note:
             st.warning(f"Review needed: {section.review_note}")
@@ -125,16 +128,14 @@ for field_name, display_name in sections:
         col_source, col_narrative = st.columns(2)
 
         with col_source:
-            st.caption("Source Data")
+            st.caption("Source Data (read-only reference)")
             source_fn = SECTION_SOURCE_MAP.get(field_name)
             if source_fn:
                 source_data = source_fn(data)
                 st.json(json.loads(json.dumps(source_data, default=str)))
-            else:
-                st.info("No source data mapping for this section.")
 
         with col_narrative:
-            st.caption("Generated Narrative (editable)")
+            st.caption("Narrative (edit below)")
             edited = st.text_area(
                 f"Edit {display_name}",
                 value=section.content,
@@ -142,18 +143,35 @@ for field_name, display_name in sections:
                 key=f"edit_{field_name}",
                 label_visibility="collapsed",
             )
-            edited_sections[field_name] = edited
+            # Live-update the section content as the BCBA types
+            section.content = edited
+
+            # Word count indicator
+            word_count = len(edited.split())
+            if word_count < 50:
+                st.caption(f"⚠ {word_count} words — may be too brief for payor")
+            elif word_count > 400:
+                st.caption(f"⚠ {word_count} words — consider condensing")
+            else:
+                st.caption(f"{word_count} words")
 
 # Show flags
 if narrative.flags_for_bcba:
-    st.subheader("Items Requiring Attention")
-    for flag in narrative.flags_for_bcba:
-        st.write(f"- {flag}")
+    st.subheader("Items Requiring BCBA Attention")
+    for flag_text in narrative.flags_for_bcba:
+        st.write(f"- {flag_text}")
 
-# Save edits back
-if st.button("Save All Edits"):
-    for field_name, content in edited_sections.items():
-        section = getattr(narrative, field_name)
-        section.content = content
-    st.session_state.narrative = narrative
-    st.success("All edits saved. Navigate to **Export** to download as Word document.")
+st.markdown("---")
+
+# Save & continue
+col1, col2 = st.columns([2, 1])
+with col1:
+    if st.button("Save All Edits", type="primary", use_container_width=True):
+        # Sections are already updated via live binding above.
+        # Re-assign to session to ensure persistence across reruns.
+        st.session_state.narrative = narrative
+        st.toast("All narrative edits saved.", icon="✅")
+        st.success("Edits saved. Navigate to **Export** to download as Word document.")
+
+with col2:
+    st.page_link("pages/4_Export.py", label="Continue to Export →", use_container_width=True)
