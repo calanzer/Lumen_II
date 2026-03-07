@@ -57,7 +57,6 @@ if st.session_state.get("authentication_status") is False:
     st.stop()
 elif st.session_state.get("authentication_status") is None:
     st.warning("Please log in to continue.")
-    st.info("Default credentials: username `bcba_reviewer`, password `changeme`")
     st.stop()
 
 # --- Authenticated content ---
@@ -91,6 +90,37 @@ col5.metric("In Progress", in_progress)
 
 st.divider()
 
+# Search and filter
+filter_col1, filter_col2 = st.columns([2, 1])
+with filter_col1:
+    search_query = st.text_input(
+        "Search clients", placeholder="Search by name or ID...",
+        label_visibility="collapsed", key="dashboard_search",
+    )
+with filter_col2:
+    urgency_filter = st.selectbox(
+        "Filter", ["All", "Needs Attention", "Expired", "Due Soon", "In Progress"],
+        label_visibility="collapsed", key="dashboard_filter",
+    )
+
+# Apply filters
+filtered = dashboard
+if search_query:
+    q = search_query.lower()
+    filtered = [d for d in filtered if q in d["display_name"].lower() or q in (d.get("client_identifier") or "").lower()]
+if urgency_filter == "Needs Attention":
+    filtered = [d for d in filtered if d["urgency"] in ("expired", "critical", "soon")]
+elif urgency_filter == "Expired":
+    filtered = [d for d in filtered if d["urgency"] == "expired"]
+elif urgency_filter == "Due Soon":
+    filtered = [d for d in filtered if d["urgency"] in ("critical", "soon")]
+elif urgency_filter == "In Progress":
+    filtered = [d for d in filtered if d.get("period_status") in ("in_progress", "generated")]
+
+if not filtered:
+    st.info("No clients match your search." if search_query else "No clients match this filter.")
+    st.stop()
+
 # Client table
 URGENCY_ICONS = {
     "expired": "🔴",
@@ -109,7 +139,7 @@ STATUS_LABELS = {
     None: "—",
 }
 
-for d in dashboard:
+for d in filtered:
     icon = URGENCY_ICONS.get(d["urgency"], "⚪")
     status_label = STATUS_LABELS.get(d.get("period_status"), "—")
     dx = ", ".join(d["diagnosis_codes"][:2]) if d["diagnosis_codes"] else "—"
@@ -146,4 +176,4 @@ for d in dashboard:
         else:
             if st.button("Set Up", key=f"setup_{d['client_id']}", use_container_width=True):
                 st.session_state.selected_client_id = d["client_id"]
-                st.switch_page("pages/3_Upload.py")
+                st.switch_page("pages/2_Client_Detail.py")
