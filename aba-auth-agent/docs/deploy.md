@@ -6,64 +6,54 @@
 Browser (BCBA)
     │  HTTPS
     ▼
-Nginx (TLS termination)
-    │
-    ▼
-Streamlit App (Python 3.11)
-    ├── SQLite (data/aba_auth.db)
-    └── Anthropic API (Claude Sonnet)
+Nginx (TLS) → Streamlit App → Anthropic API
+                   │
+                SQLite DB
 ```
 
-Single Python process, local SQLite file, outbound HTTPS to Anthropic. No database server, no message queue, no container orchestration needed.
+Single process, local SQLite, outbound HTTPS to Anthropic. ~$25-50/month total.
 
-**Estimated cost:** ~$25-50/month (VPS + Anthropic API usage)
+Push to GitHub → auto-deploys via GitHub Actions. After initial setup, you never SSH into the server again.
 
 ---
 
 ## Prerequisites
 
-1. **Anthropic API key** with a signed BAA for HIPAA-compliant PHI processing. Contact [Anthropic sales](https://www.anthropic.com/contact-sales) to request a BAA for their HIPAA-ready API service. See [Anthropic BAA documentation](https://privacy.claude.com/en/articles/8114513-business-associate-agreements-baa-for-commercial-customers).
-
-2. **A VPS** with a HIPAA-eligible provider:
-   - **AWS Lightsail** — $5-10/month, BAA via AWS
-   - **Azure VM** (B1s) — ~$8/month, BAA via Microsoft
-
-3. **A domain name** pointed at your VPS IP address.
+1. **Anthropic API key** with a signed BAA. Contact [Anthropic sales](https://www.anthropic.com/contact-sales). See [BAA docs](https://privacy.claude.com/en/articles/8114513-business-associate-agreements-baa-for-commercial-customers).
+2. **AWS Lightsail instance** ($5-10/month, BAA included). Create a $10 Ubuntu 22.04 instance in the [Lightsail console](https://lightsail.aws.amazon.com/).
+3. **A domain name** with DNS pointed at your Lightsail static IP.
+4. **GitHub repo** (private) containing this codebase.
 
 ---
 
-## Step 1: Server Setup
+## One-Time Server Setup (~15 minutes)
 
-SSH into your VPS and install dependencies:
+SSH into your Lightsail instance and run this entire block:
 
 ```bash
+# Install dependencies
 sudo apt update && sudo apt install -y \
     python3.11 python3.11-venv python3-pip \
     nginx certbot python3-certbot-nginx sqlite3
-```
 
-## Step 2: Deploy the App
-
-```bash
-# Clone and install
-git clone <your-repo-url> /opt/aba-auth-agent
+# Clone your repo
+git clone https://github.com/<you>/<repo>.git /opt/aba-auth-agent
 cd /opt/aba-auth-agent/aba-auth-agent
+
+# Python environment
 python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Set your Anthropic API key
+# Set API key
 cp .env.example .env
-nano .env  # Add: ANTHROPIC_API_KEY=sk-ant-...
+nano .env  # Set ANTHROPIC_API_KEY=sk-ant-...
 
-# Delete the default auth config so it regenerates with your own password on first launch
+# Remove default auth config (app will regenerate on first launch)
 rm -f .streamlit/auth_config.yaml
-```
 
-## Step 3: Create a systemd Service
-
-```bash
-sudo tee /etc/systemd/system/aba-auth-agent.service > /dev/null <<'EOF'
+# Create systemd service
+sudo tee /etc/systemd/system/aba-auth-agent.service > /dev/null <<'UNIT'
 [Unit]
 Description=ABA Authorization Agent
 After=network.target
@@ -83,18 +73,12 @@ RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-EOF
+UNIT
 
-sudo systemctl enable aba-auth-agent
-sudo systemctl start aba-auth-agent
-```
+sudo systemctl enable --now aba-auth-agent
 
-Verify it's running: `curl http://127.0.0.1:8501/_stcore/health`
-
-## Step 4: Nginx + TLS
-
-```bash
-sudo tee /etc/nginx/sites-available/aba-auth-agent > /dev/null <<'EOF'
+# Nginx reverse proxy
+sudo tee /etc/nginx/sites-available/aba-auth-agent > /dev/null <<'NGINX'
 server {
     listen 80;
     server_name yourdomain.com;
@@ -111,85 +95,90 @@ server {
         proxy_read_timeout 86400;
     }
 }
-EOF
+NGINX
 
-sudo ln -s /etc/nginx/sites-available/aba-auth-agent /etc/nginx/sites-enabled/
-sudo rm -f /etc/nginx/sites-enabled/default
+sudo ln -sf /etc/nginx/sites-available/aba-auth-agent /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 
-# Get a TLS certificate (auto-renews)
+# TLS certificate (auto-renews)
 sudo certbot --nginx -d yourdomain.com
-```
 
-The app is now live at `https://yourdomain.com`.
-
-## Step 5: Database Backups
-
-```bash
-sudo tee /etc/cron.daily/backup-aba-db > /dev/null <<'EOF'
+# Daily database backups
+sudo tee /etc/cron.daily/backup-aba-db > /dev/null <<'CRON'
 #!/bin/bash
 BACKUP_DIR=/opt/aba-auth-agent/backups
 mkdir -p "$BACKUP_DIR"
 sqlite3 /opt/aba-auth-agent/aba-auth-agent/data/aba_auth.db ".backup '$BACKUP_DIR/aba_auth_$(date +%Y%m%d).db'"
 find "$BACKUP_DIR" -name "*.db" -mtime +30 -delete
-EOF
-
+CRON
 sudo chmod +x /etc/cron.daily/backup-aba-db
 ```
 
-## Step 6: Set Login Credentials
-
-On first launch, the app generates `.streamlit/auth_config.yaml` with a default user (`bcba_reviewer` / `changeme`). Change this immediately:
-
-```bash
-cd /opt/aba-auth-agent/aba-auth-agent
-source .venv/bin/activate
-python3 -c "
-import bcrypt, yaml
-password = input('New password: ')
-hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-config_path = '.streamlit/auth_config.yaml'
-with open(config_path) as f:
-    config = yaml.safe_load(f)
-config['credentials']['usernames']['bcba_reviewer']['password'] = hashed
-with open(config_path, 'w') as f:
-    yaml.dump(config, f)
-print('Password updated.')
-"
-sudo systemctl restart aba-auth-agent
-```
-
-To add additional BCBA users, edit `.streamlit/auth_config.yaml` directly.
+App is live at `https://yourdomain.com`. Change the default password on first login.
 
 ---
 
-## Updating
+## GitHub Actions Auto-Deploy
 
-```bash
-cd /opt/aba-auth-agent
-git pull origin main
-sudo systemctl restart aba-auth-agent
+Add this file to your repo so pushes to `main` deploy automatically. You never need to SSH again after initial setup.
+
+Create `.github/workflows/deploy.yml`:
+
+```yaml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'aba-auth-agent/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /opt/aba-auth-agent
+            git pull origin main
+            cd aba-auth-agent
+            source .venv/bin/activate
+            pip install -q -r requirements.txt
+            sudo systemctl restart aba-auth-agent
 ```
+
+### Set up the GitHub secrets
+
+In your GitHub repo, go to **Settings → Secrets and variables → Actions** and add:
+
+| Secret | Value |
+|--------|-------|
+| `SERVER_HOST` | Your Lightsail static IP (e.g., `54.123.45.67`) |
+| `SERVER_SSH_KEY` | The private key for your Lightsail instance (paste the full PEM contents) |
+
+That's it. Push code → GitHub deploys it → app restarts.
 
 ---
 
-## Post-Deployment Checklist
+## Post-Deploy Checklist
 
-- [ ] Change default login credentials
-- [ ] Verify HTTPS works (not HTTP)
-- [ ] Test the full workflow (upload, review, generate, export)
-- [ ] Confirm Claude API calls succeed (run a test extraction)
-- [ ] Verify daily backups are running (`ls /opt/aba-auth-agent/backups/`)
-- [ ] Set up uptime monitoring (UptimeRobot free tier, ping `https://yourdomain.com/_stcore/health`)
+- [ ] Change default login credentials (`bcba_reviewer` / `changeme`)
+- [ ] Verify HTTPS works
+- [ ] Test the full workflow (upload → review → generate → export)
+- [ ] Push a small change to verify GitHub Actions deploy works
 - [ ] Confirm Anthropic BAA is signed
-- [ ] Enable disk encryption on the VPS (AWS Lightsail: enabled by default)
+- [ ] Check backups are running (`ls /opt/aba-auth-agent/backups/`)
 
 ---
 
 ## Scaling Later
 
-This setup handles 1-5 BCBAs comfortably. If you grow beyond that:
+This handles 1-5 BCBAs. If you outgrow it:
 
-- **More users:** Migrate SQLite to PostgreSQL (managed RDS or Cloud SQL, ~$15/month). The `data/store.py` queries are standard SQL and port directly.
-- **Container deployment:** The included Dockerfile works with AWS ECS Fargate, Google Cloud Run, or Azure Container Apps. Mount a persistent volume for the SQLite file or use a managed database.
-- **Multiple clinics:** Add the `user_id` column to scope data per authenticated user (the schema already has this field planned).
+- **More users:** Migrate SQLite → PostgreSQL (AWS RDS, ~$15/month). The queries in `data/store.py` are standard SQL and port directly.
+- **Multiple clinics:** Scope data per user with the `user_id` column (already planned in the schema).
