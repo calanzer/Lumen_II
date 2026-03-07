@@ -59,7 +59,7 @@ with st.expander("+ Add New Client", expanded=False):
         elif submitted:
             st.error("Display name is required.")
 
-st.divider()
+st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
 # --- Client List ---
 clients = list_clients(status="active")
@@ -72,45 +72,102 @@ if not clients:
     )
     st.stop()
 
+# --- Search & Count Row ---
+search_col, count_col = st.columns([3, 1])
+with search_col:
+    search_query = st.text_input(
+        "Search clients",
+        placeholder="Search by name, ID, diagnosis, or payor\u2026",
+        label_visibility="collapsed",
+    )
+with count_col:
+    st.markdown(
+        f'<div style="display:flex; align-items:center; justify-content:flex-end; height:100%; padding-top:8px;">'
+        f'<span class="client-count">'
+        f'<span class="count-num">{len(clients)}</span> active client{"s" if len(clients) != 1 else ""}'
+        f'</span></div>',
+        unsafe_allow_html=True,
+    )
+
+# Filter clients by search
+if search_query:
+    q = search_query.lower()
+    clients = [
+        c for c in clients
+        if q in c["display_name"].lower()
+        or q in (c.get("client_identifier") or "").lower()
+        or q in " ".join(c.get("diagnosis_codes") or []).lower()
+        or q in c.get("payor", "").lower()
+    ]
+
+if not clients and search_query:
+    st.info(f'No clients match "{search_query}".')
+    st.stop()
+
+# --- Table Header (HTML) ---
 st.markdown(
-    f'<p style="color:#6B7280; font-size:13px; margin-bottom:8px;">'
-    f'Showing {len(clients)} active client{"s" if len(clients) != 1 else ""}</p>',
+    '<div class="client-table-wrap">'
+    '<div class="client-table-header">'
+    '<div>Client</div>'
+    '<div>Diagnosis</div>'
+    '<div>Payor</div>'
+    '<div style="text-align:right;">Actions</div>'
+    '</div>'
+    '</div>',
     unsafe_allow_html=True,
 )
 
+# --- Client Rows ---
 for c in clients:
-    st.markdown('<div class="client-row">', unsafe_allow_html=True)
+    client_name = c["display_name"]
+    client_id_str = c.get("client_identifier") or "\u2014"
+    dx_str = ", ".join(c["diagnosis_codes"][:3]) if c["diagnosis_codes"] else "\u2014"
+    payor_display = c["payor"].replace("_", " ").title()
 
-    col_name, col_id, col_dx, col_payor, col_actions = st.columns([2, 1.5, 1.5, 1.5, 2])
+    # Row HTML info
+    st.markdown(
+        '<div class="client-table-wrap" style="border-top:none; border-radius:0; margin-top:-1px;">',
+        unsafe_allow_html=True,
+    )
 
-    with col_name:
-        st.markdown(f"**{c['display_name']}**")
-    with col_id:
-        st.caption("Client ID")
-        st.write(c.get("client_identifier") or "\u2014")
-    with col_dx:
-        st.caption("Diagnosis")
-        st.write(", ".join(c["diagnosis_codes"][:2]) if c["diagnosis_codes"] else "\u2014")
-    with col_payor:
-        st.caption("Payor")
-        st.write(c["payor"].replace("_", " ").title()[:20])
-    with col_actions:
-        btn_col1, btn_col2, btn_col3 = st.columns(3)
-        with btn_col1:
-            if st.button("View", key=f"view_{c['id']}", use_container_width=True):
+    row_cols = st.columns([2, 1.2, 1.5, 2])
+
+    with row_cols[0]:
+        st.markdown(
+            f'<div class="client-name">{client_name}'
+            f'<span class="client-id-sub">{client_id_str}</span></div>',
+            unsafe_allow_html=True,
+        )
+
+    with row_cols[1]:
+        if dx_str == "\u2014":
+            st.markdown(f'<div class="client-cell-muted">{dx_str}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="client-cell">{dx_str}</div>', unsafe_allow_html=True)
+
+    with row_cols[2]:
+        st.markdown(
+            f'<div><span class="client-payor-badge">{payor_display}</span></div>',
+            unsafe_allow_html=True,
+        )
+
+    with row_cols[3]:
+        btn_c1, btn_c2, btn_c3 = st.columns(3)
+        with btn_c1:
+            if st.button("View", key=f"view_{c['id']}", use_container_width=True, type="primary"):
                 st.session_state.selected_client_id = c["id"]
                 st.switch_page("pages/2_Client_Detail.py")
-        with btn_col2:
+        with btn_c2:
             if st.button("Upload", key=f"upload_{c['id']}", use_container_width=True):
                 st.session_state.selected_client_id = c["id"]
                 st.switch_page("pages/3_Upload.py")
-        with btn_col3:
+        with btn_c3:
             confirm_key = f"confirm_archive_{c['id']}"
             if st.session_state.get(confirm_key):
                 st.warning(f"Archive **{c['display_name']}**?")
                 yes_col, no_col = st.columns(2)
                 with yes_col:
-                    if st.button("Yes, archive", key=f"yes_archive_{c['id']}", type="primary", use_container_width=True):
+                    if st.button("Yes", key=f"yes_archive_{c['id']}", type="primary", use_container_width=True):
                         update_client(c["id"], status="discharged")
                         st.session_state.pop(confirm_key, None)
                         st.rerun()
