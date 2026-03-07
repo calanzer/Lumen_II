@@ -10,8 +10,23 @@ from data.store import (
     create_auth_period,
 )
 from pipeline.exporter import list_available_payors
+from ui_style import (
+    inject_custom_css,
+    branded_header,
+    sidebar_branding,
+    sidebar_trust_badges,
+    empty_state,
+    status_badge,
+    COLOR_SUCCESS,
+    COLOR_NEUTRAL,
+    BRAND_PRIMARY,
+)
 
-st.header("Clients")
+inject_custom_css()
+sidebar_branding()
+sidebar_trust_badges()
+
+branded_header("Clients", "Manage your ABA client roster.")
 
 # --- Add Client ---
 with st.expander("+ Add New Client", expanded=False):
@@ -50,19 +65,34 @@ st.divider()
 clients = list_clients(status="active")
 
 if not clients:
-    st.info("No clients yet. Add your first client above.")
+    empty_state(
+        "&#128101;",
+        "No clients yet",
+        "Add your first client using the form above to start managing reauthorizations.",
+    )
     st.stop()
 
+st.markdown(
+    f'<p style="color:#6B7280; font-size:13px; margin-bottom:8px;">'
+    f'Showing {len(clients)} active client{"s" if len(clients) != 1 else ""}</p>',
+    unsafe_allow_html=True,
+)
+
 for c in clients:
+    st.markdown('<div class="client-row">', unsafe_allow_html=True)
+
     col_name, col_id, col_dx, col_payor, col_actions = st.columns([2, 1.5, 1.5, 1.5, 2])
 
     with col_name:
-        st.write(f"**{c['display_name']}**")
+        st.markdown(f"**{c['display_name']}**")
     with col_id:
-        st.write(c.get("client_identifier") or "—")
+        st.caption("Client ID")
+        st.write(c.get("client_identifier") or "\u2014")
     with col_dx:
-        st.write(", ".join(c["diagnosis_codes"][:2]) if c["diagnosis_codes"] else "—")
+        st.caption("Diagnosis")
+        st.write(", ".join(c["diagnosis_codes"][:2]) if c["diagnosis_codes"] else "\u2014")
     with col_payor:
+        st.caption("Payor")
         st.write(c["payor"].replace("_", " ").title()[:20])
     with col_actions:
         btn_col1, btn_col2, btn_col3 = st.columns(3)
@@ -75,6 +105,8 @@ for c in clients:
                 st.session_state.selected_client_id = c["id"]
                 st.switch_page("pages/3_Upload.py")
         with btn_col3:
-            if st.button("Archive", key=f"archive_{c['id']}", use_container_width=True):
+            if st.button("Archive", key=f"archive_{c['id']}", use_container_width=True, type="secondary"):
                 update_client(c["id"], status="discharged")
                 st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)

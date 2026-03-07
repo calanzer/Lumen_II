@@ -15,8 +15,27 @@ load_dotenv()
 from data.store import get_auth_period, get_prior_period, save_narrative
 from pipeline.generator import generate_narrative, validate_narrative_against_source
 from schemas.narrative import AnthemReauthNarrative
+from ui_style import (
+    inject_custom_css,
+    branded_header,
+    sidebar_branding,
+    sidebar_trust_badges,
+    section_header,
+    progress_bar_html,
+    status_badge,
+    metric_card,
+    COLOR_SUCCESS,
+    COLOR_WARNING,
+    COLOR_CRITICAL,
+    COLOR_INFO,
+    BRAND_PRIMARY,
+)
 
-st.header("Generate Reauthorization Narrative")
+inject_custom_css()
+sidebar_branding()
+sidebar_trust_badges()
+
+branded_header("Generate Reauthorization Narrative", "AI-generated draft for BCBA review and editing.")
 
 # Load from DB
 period_id = st.session_state.get("selected_period_id")
@@ -49,14 +68,22 @@ if prior_period and prior_period.get("extracted_data_parsed"):
 
         col1, col2 = st.columns(2)
         with col1:
-            st.write("**Prior Period:**")
+            st.markdown(
+                '<div style="background:#F0F7F9; padding:12px; border-radius:8px;">'
+                '<strong>Prior Period</strong></div>',
+                unsafe_allow_html=True,
+            )
             st.write(f"- Skill targets: {len(prior_data.skill_acquisition_targets)} ({sum(1 for t in prior_data.skill_acquisition_targets if t.is_mastered)} mastered)")
             st.write(f"- Behaviors: {len(prior_data.behavior_reduction_targets)}")
             for b in prior_data.behavior_reduction_targets:
                 if b.current_value is not None:
                     st.write(f"  - {b.behavior_name}: {b.current_value} {b.unit}")
         with col2:
-            st.write("**Current Period:**")
+            st.markdown(
+                '<div style="background:#ECFDF5; padding:12px; border-radius:8px;">'
+                '<strong>Current Period</strong></div>',
+                unsafe_allow_html=True,
+            )
             st.write(f"- Skill targets: {len(data.skill_acquisition_targets)} ({sum(1 for t in data.skill_acquisition_targets if t.is_mastered)} mastered)")
             st.write(f"- Behaviors: {len(data.behavior_reduction_targets)}")
             for b in data.behavior_reduction_targets:
@@ -66,12 +93,17 @@ if prior_period and prior_period.get("extracted_data_parsed"):
 # Check validation status
 validation = st.session_state.get("validation", {})
 if not validation.get("is_complete", False):
-    st.warning(
-        f"Extracted data is incomplete (score: {validation.get('score', 0):.0%}). "
-        "Narrative will contain placeholders for missing data."
+    st.markdown(
+        '<div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:10px; padding:14px 18px;">'
+        f'<strong style="color:#D97706;">Extracted data is incomplete</strong> (score: {validation.get("score", 0):.0%}). '
+        'Narrative will contain placeholders for missing data.'
+        '</div>',
+        unsafe_allow_html=True,
     )
 
-if st.button("Generate Anthem Blue Cross Narrative", type="primary"):
+st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
+
+if st.button("Generate Anthem Blue Cross Narrative", type="primary", use_container_width=True):
     with st.spinner("Generating narrative... (30-60 seconds)"):
         try:
             narrative = generate_narrative(data)
@@ -79,7 +111,16 @@ if st.button("Generate Anthem Blue Cross Narrative", type="primary"):
             # Save to DB
             if period_id:
                 save_narrative(period_id, narrative)
-            st.success(f"Narrative generated. Confidence: {narrative.overall_confidence:.0%}")
+
+            confidence_color = COLOR_SUCCESS if narrative.overall_confidence >= 0.8 else COLOR_WARNING
+            st.markdown(
+                f'<div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:14px 18px;">'
+                f'<strong style="color:#059669;">Narrative generated successfully.</strong> '
+                f'Confidence: '
+                + progress_bar_html(narrative.overall_confidence * 100, 100, confidence_color)
+                + '</div>',
+                unsafe_allow_html=True,
+            )
         except Exception as e:
             st.error(f"Generation failed: {e}")
             st.exception(e)
@@ -102,10 +143,20 @@ narrative = st.session_state.narrative
 
 # Display narrative sections for BCBA review with side-by-side source data
 st.markdown("---")
-st.subheader("BCBA Review — Edit Narrative Sections")
-st.caption(
-    "Left: source data for verification. Right: AI-generated draft — **edit directly in the text boxes**. "
-    "Your clinical judgment takes precedence over AI output."
+st.markdown(
+    '<div class="section-header">'
+    '<span class="section-title">BCBA Review \u2014 Edit Narrative Sections</span>'
+    '</div>',
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    '<div style="background:#F0F7F9; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; color:#6B7280;">'
+    '<strong style="color:#1A2B3C;">Left:</strong> source data for verification. '
+    '<strong style="color:#1A2B3C;">Right:</strong> AI-generated draft \u2014 '
+    '<strong>edit directly in the text boxes</strong>. Your clinical judgment takes precedence over AI output.'
+    '</div>',
+    unsafe_allow_html=True,
 )
 
 # Map sections to their relevant source data fields for side-by-side display
@@ -163,8 +214,11 @@ sections = [
 
 for field_name, display_name in sections:
     section = getattr(narrative, field_name)
-    flag = "⚠ " if section.requires_review else ""
-    with st.expander(f"{flag}{display_name}", expanded=section.requires_review):
+    flag_badge = status_badge("Needs Review", COLOR_WARNING) if section.requires_review else status_badge("OK", COLOR_SUCCESS)
+
+    with st.expander(f"{display_name}", expanded=section.requires_review):
+        st.markdown(flag_badge, unsafe_allow_html=True)
+
         if section.requires_review and section.review_note:
             st.warning(f"Review needed: {section.review_note}")
 
@@ -172,14 +226,22 @@ for field_name, display_name in sections:
         col_source, col_narrative = st.columns(2)
 
         with col_source:
-            st.caption("Source Data (read-only reference)")
+            st.markdown(
+                '<p style="font-size:12px; font-weight:600; color:#6B7280; text-transform:uppercase; letter-spacing:0.5px;">'
+                'Source Data (read-only reference)</p>',
+                unsafe_allow_html=True,
+            )
             source_fn = SECTION_SOURCE_MAP.get(field_name)
             if source_fn:
                 source_data = source_fn(data)
                 st.json(json.loads(json.dumps(source_data, default=str)))
 
         with col_narrative:
-            st.caption("Narrative (edit below)")
+            st.markdown(
+                '<p style="font-size:12px; font-weight:600; color:#6B7280; text-transform:uppercase; letter-spacing:0.5px;">'
+                'Narrative (edit below)</p>',
+                unsafe_allow_html=True,
+            )
             edited = st.text_area(
                 f"Edit {display_name}",
                 value=section.content,
@@ -191,17 +253,37 @@ for field_name, display_name in sections:
 
             word_count = len(edited.split())
             if word_count < 50:
-                st.caption(f"⚠ {word_count} words — may be too brief for payor")
+                st.markdown(
+                    f'<span style="font-size:12px; color:{COLOR_WARNING};">'
+                    f'{word_count} words \u2014 may be too brief for payor</span>',
+                    unsafe_allow_html=True,
+                )
             elif word_count > 400:
-                st.caption(f"⚠ {word_count} words — consider condensing")
+                st.markdown(
+                    f'<span style="font-size:12px; color:{COLOR_WARNING};">'
+                    f'{word_count} words \u2014 consider condensing</span>',
+                    unsafe_allow_html=True,
+                )
             else:
                 st.caption(f"{word_count} words")
 
 # Show flags
 if narrative.flags_for_bcba:
-    st.subheader("Items Requiring BCBA Attention")
+    st.markdown("---")
+    st.markdown(
+        '<div class="section-header">'
+        '<span class="section-title">Items Requiring BCBA Attention</span>'
+        f'<span class="section-count">{len(narrative.flags_for_bcba)} flag{"s" if len(narrative.flags_for_bcba) != 1 else ""}</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     for flag_text in narrative.flags_for_bcba:
-        st.write(f"- {flag_text}")
+        st.markdown(
+            f'<div style="background:#FFFBEB; border-left:4px solid {COLOR_WARNING}; '
+            f'padding:8px 14px; border-radius:0 8px 8px 0; margin-bottom:6px; font-size:14px;">'
+            f'{flag_text}</div>',
+            unsafe_allow_html=True,
+        )
 
 st.markdown("---")
 
@@ -212,8 +294,8 @@ with col1:
         st.session_state.narrative = narrative
         if period_id:
             save_narrative(period_id, narrative)
-        st.toast("All narrative edits saved.", icon="✅")
+        st.toast("All narrative edits saved.", icon="\u2705")
         st.success("Edits saved. Navigate to **Export** to download as Word document.")
 
 with col2:
-    st.page_link("pages/6_Export.py", label="Continue to Export →", use_container_width=True)
+    st.page_link("pages/6_Export.py", label="Continue to Export \u2192", use_container_width=True)

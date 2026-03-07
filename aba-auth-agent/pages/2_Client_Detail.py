@@ -9,8 +9,26 @@ from data.store import (
     create_auth_period,
     update_period_notes,
 )
+from ui_style import (
+    inject_custom_css,
+    branded_header,
+    sidebar_branding,
+    sidebar_trust_badges,
+    status_badge,
+    metric_card,
+    progress_bar_html,
+    empty_state,
+    COLOR_CRITICAL,
+    COLOR_WARNING,
+    COLOR_SUCCESS,
+    COLOR_INFO,
+    COLOR_NEUTRAL,
+    BRAND_PRIMARY,
+)
 
-st.header("Client Detail")
+inject_custom_css()
+sidebar_branding()
+sidebar_trust_badges()
 
 client_id = st.session_state.get("selected_client_id")
 if not client_id:
@@ -23,17 +41,30 @@ if not client:
     st.stop()
 
 # --- Client header ---
-col1, col2, col3 = st.columns([2, 1, 1])
-with col1:
-    st.subheader(client["display_name"])
-    if client.get("client_identifier"):
-        st.caption(f"ID: {client['client_identifier']}")
-with col2:
-    st.write(f"**Dx:** {', '.join(client['diagnosis_codes']) if client['diagnosis_codes'] else '—'}")
-with col3:
-    st.write(f"**Payor:** {client['payor'].replace('_', ' ').title()}")
+branded_header(
+    client["display_name"],
+    f"ID: {client.get('client_identifier') or '\u2014'}",
+)
 
-st.divider()
+col1, col2, col3 = st.columns(3)
+with col1:
+    dx_text = ", ".join(client["diagnosis_codes"]) if client["diagnosis_codes"] else "\u2014"
+    st.markdown(
+        metric_card("Diagnosis", dx_text, BRAND_PRIMARY),
+        unsafe_allow_html=True,
+    )
+with col2:
+    st.markdown(
+        metric_card("Payor", client["payor"].replace("_", " ").title(), COLOR_INFO),
+        unsafe_allow_html=True,
+    )
+with col3:
+    st.markdown(
+        metric_card("Status", client.get("status", "active").title(), COLOR_SUCCESS),
+        unsafe_allow_html=True,
+    )
+
+st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)
 
 # --- New auth period ---
 with st.expander("+ New Authorization Period", expanded=False):
@@ -54,24 +85,39 @@ with st.expander("+ New Authorization Period", expanded=False):
 periods = list_auth_periods(client_id)
 
 if not periods:
-    st.info("No authorization periods yet. Create one above to get started.")
+    empty_state(
+        "&#128197;",
+        "No authorization periods",
+        "Create your first auth period above to start tracking reauthorizations.",
+    )
     st.stop()
 
-STATUS_BADGES = {
-    "draft": ("Draft", "🔵"),
-    "in_progress": ("Reviewing", "🟡"),
-    "generated": ("Narrative Ready", "🟢"),
-    "exported": ("Exported", "✅"),
-    "submitted": ("Submitted", "✅"),
+STATUS_CONFIG = {
+    "draft": ("Draft", COLOR_INFO),
+    "in_progress": ("Reviewing", COLOR_WARNING),
+    "generated": ("Narrative Ready", COLOR_SUCCESS),
+    "exported": ("Exported", COLOR_SUCCESS),
+    "submitted": ("Submitted", COLOR_SUCCESS),
 }
 
-st.subheader(f"Authorization Periods ({len(periods)})")
+st.markdown(
+    f'<div class="section-header">'
+    f'<span class="section-title">Authorization Periods</span>'
+    f'<span class="section-count">{len(periods)} period{"s" if len(periods) != 1 else ""}</span>'
+    f'</div>',
+    unsafe_allow_html=True,
+)
 
 for p in periods:
-    badge_text, badge_icon = STATUS_BADGES.get(p["status"], ("Unknown", "⚪"))
-    title = f"{badge_icon} {p['period_start']} to {p['period_end']} — {badge_text}"
+    badge_text, badge_color = STATUS_CONFIG.get(p["status"], ("Unknown", COLOR_NEUTRAL))
+    badge_html = status_badge(badge_text, badge_color)
+    title = f"{p['period_start']} to {p['period_end']}"
 
-    with st.expander(title, expanded=(p["id"] == st.session_state.get("selected_period_id"))):
+    with st.expander(f"{title} \u2014 {badge_text}", expanded=(p["id"] == st.session_state.get("selected_period_id"))):
+        # Status badge at top
+        st.markdown(badge_html, unsafe_allow_html=True)
+        st.markdown("<div style='height:8px;'></div>", unsafe_allow_html=True)
+
         # Status and dates
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -85,17 +131,26 @@ for p in periods:
             if p.get("extracted_at"):
                 st.metric("Extracted", p["extracted_at"][:10])
             else:
-                st.metric("Extracted", "—")
+                st.metric("Extracted", "\u2014")
         with col4:
             if p.get("exported_at"):
                 st.metric("Exported", p["exported_at"][:10])
             else:
-                st.metric("Exported", "—")
+                st.metric("Exported", "\u2014")
 
         # Validation summary (if exists)
         if p.get("validation_result_parsed"):
             vr = p["validation_result_parsed"]
-            st.write(f"**Completeness:** {vr['score']:.0%} | **Missing:** {len(vr['missing'])} | **Warnings:** {len(vr['warnings'])}")
+            completeness_color = COLOR_SUCCESS if vr["score"] >= 0.8 else COLOR_WARNING
+            st.markdown(
+                f'<div style="margin:8px 0;">'
+                f'<strong>Completeness:</strong> '
+                + progress_bar_html(vr["score"] * 100, 100, completeness_color)
+                + f' | <strong>Missing:</strong> {len(vr["missing"])} '
+                f'| <strong>Warnings:</strong> {len(vr["warnings"])}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
         # Quick data summary (if extraction exists)
         if p.get("extracted_data_parsed"):
@@ -110,7 +165,15 @@ for p in periods:
         # Narrative confidence (if generated)
         if p.get("narrative_data_parsed"):
             nd = p["narrative_data_parsed"]
-            st.write(f"**Narrative Confidence:** {nd.overall_confidence:.0%} | **BCBA Flags:** {len(nd.flags_for_bcba)}")
+            confidence_color = COLOR_SUCCESS if nd.overall_confidence >= 0.8 else COLOR_WARNING
+            st.markdown(
+                f'<div style="margin:8px 0;">'
+                f'<strong>Narrative Confidence:</strong> '
+                + progress_bar_html(nd.overall_confidence * 100, 100, confidence_color)
+                + f' | <strong>BCBA Flags:</strong> {len(nd.flags_for_bcba)}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
         # Notes
         notes = st.text_area(
@@ -158,7 +221,12 @@ for p in periods:
 periods_with_data = [p for p in periods if p.get("extracted_data_parsed")]
 if len(periods_with_data) >= 2:
     st.divider()
-    st.subheader("Assessment Trends Across Periods")
+    st.markdown(
+        '<div class="section-header">'
+        '<span class="section-title">Assessment Trends Across Periods</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     # Collect VB-MAPP scores across periods
     vbmapp_data = []
@@ -178,7 +246,7 @@ if len(periods_with_data) >= 2:
         header = ["Domain"] + [d["period"] for d in vbmapp_data]
         rows = []
         for domain in domains[:10]:  # Top 10 domains
-            row = [domain] + [str(d["scores"].get(domain, "—")) for d in vbmapp_data]
+            row = [domain] + [str(d["scores"].get(domain, "\u2014")) for d in vbmapp_data]
             rows.append(row)
 
         import pandas as pd

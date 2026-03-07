@@ -16,8 +16,25 @@ from schemas.clinical_data import (
     CPTCode,
     ExtractedClinicalData,
 )
+from ui_style import (
+    inject_custom_css,
+    branded_header,
+    sidebar_branding,
+    sidebar_trust_badges,
+    section_header,
+    progress_bar_html,
+    status_badge,
+    COLOR_SUCCESS,
+    COLOR_WARNING,
+    COLOR_CRITICAL,
+    BRAND_PRIMARY,
+)
 
-st.header("Review & Edit Extracted Data")
+inject_custom_css()
+sidebar_branding()
+sidebar_trust_badges()
+
+branded_header("Review & Edit Extracted Data", "Verify clinical data before generating the reauthorization narrative.")
 
 # Load from DB if available, fallback to session state
 period_id = st.session_state.get("selected_period_id")
@@ -57,22 +74,32 @@ def _save_all():
         # Persist to database
         if period_id:
             save_clinical_data(period_id, updated, validation)
-        st.toast("All changes saved.", icon="✅")
+        st.toast("All changes saved.", icon="\u2705")
     except Exception as e:
         st.error(f"Validation error: {e}")
 
 
-# ═══════════════════════════════════════════════════════════════════════
-# Validation summary banner
-# ═══════════════════════════════════════════════════════════════════════
+# --- Validation summary banner ---
 validation = st.session_state.get("validation")
 if validation:
+    completeness_color = COLOR_SUCCESS if validation["score"] >= 0.8 else COLOR_WARNING
     if validation["is_complete"]:
-        st.success(f"Data completeness: {validation['score']:.0%} — all required fields found.")
+        st.markdown(
+            '<div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:10px; padding:14px 18px; margin-bottom:16px;">'
+            f'<strong style="color:#059669;">Data completeness: {validation["score"]:.0%}</strong> '
+            '\u2014 all required fields found. '
+            + progress_bar_html(validation["score"] * 100, 100, COLOR_SUCCESS)
+            + '</div>',
+            unsafe_allow_html=True,
+        )
     else:
-        st.warning(
-            f"Data completeness: {validation['score']:.0%} — "
-            f"{len(validation['missing'])} required fields missing. Edit below to fix."
+        st.markdown(
+            '<div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:10px; padding:14px 18px; margin-bottom:16px;">'
+            f'<strong style="color:#D97706;">Data completeness: {validation["score"]:.0%}</strong> '
+            f'\u2014 {len(validation["missing"])} required fields missing. Edit below to fix. '
+            + progress_bar_html(validation["score"] * 100, 100, COLOR_WARNING)
+            + '</div>',
+            unsafe_allow_html=True,
         )
     if validation.get("warnings"):
         with st.expander(f"{len(validation['warnings'])} warnings", expanded=False):
@@ -80,10 +107,10 @@ if validation:
                 st.write(f"- {w}")
 
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # 1. Client Demographics
-# ═══════════════════════════════════════════════════════════════════════
-st.subheader("1. Client Demographics")
+# ===================================================================
+section_header(1, "Client Demographics")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -132,10 +159,10 @@ with col2:
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # 2. Assessments
-# ═══════════════════════════════════════════════════════════════════════
-st.subheader(f"2. Assessments ({len(data.assessments)})")
+# ===================================================================
+section_header(2, "Assessments", f"{len(data.assessments)} found")
 
 for i, a in enumerate(data.assessments):
     with st.expander(f"{a.assessment_type.value}: {a.assessment_name}", expanded=False):
@@ -201,14 +228,15 @@ if st.button("+ Add Assessment", key="add_assessment"):
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # 3. Skill Acquisition Targets
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 mastered = sum(1 for t in data.skill_acquisition_targets if t.is_mastered)
-st.subheader(f"3. Skill Acquisition Targets ({mastered}/{len(data.skill_acquisition_targets)} mastered)")
+section_header(3, "Skill Acquisition Targets", f"{mastered}/{len(data.skill_acquisition_targets)} mastered")
 
 for i, t in enumerate(data.skill_acquisition_targets):
-    icon = "✓" if t.is_mastered else "○"
+    mastery_color = COLOR_SUCCESS if t.is_mastered else COLOR_WARNING
+    icon = "\u2713" if t.is_mastered else "\u25cb"
     with st.expander(f"{icon} {t.domain}: {t.target_name}", expanded=False):
         col1, col2 = st.columns(2)
         with col1:
@@ -257,13 +285,14 @@ if st.button("+ Add Skill Target", key="add_skill"):
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # 4. Behavior Reduction Targets
-# ═══════════════════════════════════════════════════════════════════════
-st.subheader(f"4. Behavior Reduction Targets ({len(data.behavior_reduction_targets)})")
+# ===================================================================
+section_header(4, "Behavior Reduction Targets", f"{len(data.behavior_reduction_targets)} tracked")
 
 for i, b in enumerate(data.behavior_reduction_targets):
-    trend_label = b.trend.value if b.trend else "—"
+    trend_label = b.trend.value if b.trend else "\u2014"
+    trend_color = COLOR_SUCCESS if trend_label == "decreasing" else COLOR_WARNING if trend_label == "stable" else COLOR_CRITICAL
     with st.expander(f"[{trend_label}] {b.behavior_name}", expanded=False):
         col1, col2 = st.columns(2)
         with col1:
@@ -290,7 +319,12 @@ for i, b in enumerate(data.behavior_reduction_targets):
         if b.baseline_value and b.current_value and b.baseline_value > 0:
             reduction = (1 - b.current_value / b.baseline_value) * 100
             if reduction > 0:
-                st.metric("Reduction from Baseline", f"{reduction:.0f}%")
+                st.markdown(
+                    f'<div style="background:#ECFDF5; padding:8px 14px; border-radius:8px; display:inline-block;">'
+                    f'<strong style="color:#059669;">Reduction from Baseline: {reduction:.0f}%</strong>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
 
         b.operational_definition = st.text_area(
             "Operational Definition", value=b.operational_definition, height=100, key=f"beh_opdef_{i}",
@@ -317,15 +351,15 @@ if st.button("+ Add Behavior Target", key="add_behavior"):
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # 5. Hours Utilization
-# ═══════════════════════════════════════════════════════════════════════
-st.subheader(f"5. Hours Utilization ({len(data.hours_utilization)})")
+# ===================================================================
+section_header(5, "Hours Utilization", f"{len(data.hours_utilization)} codes")
 
 for i, h in enumerate(data.hours_utilization):
     pct = h.utilization_pct or (h.utilized_units / h.authorized_units * 100 if h.authorized_units else 0)
-    icon = "🔴" if pct < 80 else "🟢"
-    with st.expander(f"{icon} {h.cpt_code.value} — {h.utilized_units}/{h.authorized_units} units ({pct:.0f}%)", expanded=False):
+    util_color = COLOR_CRITICAL if pct < 80 else COLOR_SUCCESS
+    with st.expander(f"{h.cpt_code.value} \u2014 {h.utilized_units}/{h.authorized_units} units ({pct:.0f}%)", expanded=False):
         col1, col2, col3 = st.columns(3)
         with col1:
             cpt_options = [c.value for c in CPTCode]
@@ -336,10 +370,15 @@ for i, h in enumerate(data.hours_utilization):
         with col3:
             h.utilized_units = st.number_input("Utilized Units", value=float(h.utilized_units), min_value=0.0, format="%.0f", key=f"hours_util_{i}")
 
-        # Auto-calculate
+        # Auto-calculate with visual progress
         if h.authorized_units > 0:
             h.utilization_pct = round(h.utilized_units / h.authorized_units * 100, 1)
-            st.write(f"**Utilization: {h.utilization_pct:.1f}%**")
+            bar_color = COLOR_SUCCESS if h.utilization_pct >= 80 else COLOR_WARNING if h.utilization_pct >= 60 else COLOR_CRITICAL
+            st.markdown(
+                f'<strong>Utilization:</strong> '
+                + progress_bar_html(h.utilization_pct, 100, bar_color),
+                unsafe_allow_html=True,
+            )
 
         if h.utilization_pct is not None and h.utilization_pct < 80:
             h.explanation_if_low = st.text_area(
@@ -364,13 +403,14 @@ if st.button("+ Add Hours Entry", key="add_hours"):
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # 6. Treatment Goals
-# ═══════════════════════════════════════════════════════════════════════
-st.subheader(f"6. Treatment Goals ({len(data.treatment_goals)})")
+# ===================================================================
+section_header(6, "Treatment Goals", f"{len(data.treatment_goals)} goals")
 
 for i, g in enumerate(data.treatment_goals):
-    with st.expander(f"Goal {g.goal_number}: {g.goal_area} — {g.status}", expanded=False):
+    goal_color = COLOR_SUCCESS if g.status == "met" else COLOR_WARNING if g.status == "in progress" else COLOR_CRITICAL
+    with st.expander(f"Goal {g.goal_number}: {g.goal_area} \u2014 {g.status}", expanded=False):
         col1, col2, col3 = st.columns(3)
         with col1:
             g.goal_number = st.number_input("Goal #", value=g.goal_number, min_value=1, key=f"goal_num_{i}")
@@ -413,10 +453,10 @@ if st.button("+ Add Treatment Goal", key="add_goal"):
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # 7. Caregiver Training
-# ═══════════════════════════════════════════════════════════════════════
-st.subheader("7. Caregiver Training")
+# ===================================================================
+section_header(7, "Caregiver Training")
 
 ct = data.caregiver_training
 ct.total_sessions = st.number_input("Total Sessions", value=ct.total_sessions, min_value=0, key="cg_sessions")
@@ -432,10 +472,10 @@ ct.barriers_to_participation = val or None
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # 8. Discharge Plan
-# ═══════════════════════════════════════════════════════════════════════
-st.subheader("8. Discharge Plan")
+# ===================================================================
+section_header(8, "Discharge Plan")
 
 dp = data.discharge_plan
 criteria_str = st.text_area(
@@ -452,10 +492,10 @@ dp.current_discharge_readiness = val or None
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # 9. Requested Hours
-# ═══════════════════════════════════════════════════════════════════════
-st.subheader("9. Requested Hours for Next Authorization")
+# ===================================================================
+section_header(9, "Requested Hours for Next Authorization")
 
 if data.requested_hours_by_code:
     updated_hours = {}
@@ -476,9 +516,9 @@ data.clinical_justification_for_hours = val or None
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # Confidence Notes & Missing Fields
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 if data.confidence_notes:
     with st.expander(f"Extraction Confidence Notes ({len(data.confidence_notes)})"):
         for note in data.confidence_notes:
@@ -491,9 +531,9 @@ if data.missing_fields:
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 # Save & Continue
-# ═══════════════════════════════════════════════════════════════════════
+# ===================================================================
 col1, col2, col3 = st.columns([2, 1, 1])
 with col1:
     if st.button("Save All Changes", type="primary", use_container_width=True):
@@ -516,4 +556,4 @@ with col2:
                 st.error(f"Invalid JSON: {e}")
 
 with col3:
-    st.page_link("pages/5_Generate.py", label="Continue to Generate →", use_container_width=True)
+    st.page_link("pages/5_Generate.py", label="Continue to Generate \u2192", use_container_width=True)
