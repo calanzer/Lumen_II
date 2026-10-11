@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 .streamlit/secrets.toml
+.streamlit/auth_config.yaml
 uploads/
 outputs/
 .venv/
