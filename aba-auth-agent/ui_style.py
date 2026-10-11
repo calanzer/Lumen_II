@@ -432,21 +432,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ===== Client Table ===== */
-.client-table-wrap {
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #E5E7EB;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    overflow: hidden;
-    margin-top: 4px;
-}
-
-.client-table-header {
-    display: grid;
-    grid-template-columns: 2fr 1.2fr 1.2fr 1.5fr;
-    padding: 12px 20px;
-    background: #F8FAFB;
-    border-bottom: 2px solid #E5E7EB;
+.client-table-header-cell {
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
@@ -454,21 +440,10 @@ h1, h2, h3, h4, h5, h6 {
     color: #6B7280;
 }
 
-.client-table-row {
-    display: grid;
-    grid-template-columns: 2fr 1.2fr 1.2fr 1.5fr;
-    align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid #F0F1F3;
-    transition: background 0.15s;
-}
-
-.client-table-row:last-child {
-    border-bottom: none;
-}
-
-.client-table-row:hover {
-    background: #F0F7F9;
+.client-table-divider {
+    margin: 0 !important;
+    border: none;
+    border-top: 1px solid #EEF0F2;
 }
 
 .client-name {
@@ -507,14 +482,6 @@ h1, h2, h3, h4, h5, h6 {
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-/* Search bar styling */
-.client-search-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 4px;
 }
 
 .client-count {

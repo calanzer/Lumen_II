@@ -1,5 +1,7 @@
 """Page 1: Client Management — add, edit, and view clients."""
 
+import html
+
 import streamlit as st
 
 from data.store import (
@@ -30,7 +32,7 @@ branded_header("Clients", "Manage your ABA client roster.")
 
 # --- Add Client ---
 with st.expander("+ Add New Client", expanded=False):
-    with st.form("add_client"):
+    with st.form("add_client", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
             name = st.text_input("Display Name (de-identified)", placeholder="Martinez, A.")
@@ -73,23 +75,15 @@ if not clients:
     st.stop()
 
 # --- Search & Count Row ---
-search_col, count_col = st.columns([3, 1])
-with search_col:
-    search_query = st.text_input(
-        "Search clients",
-        placeholder="Search by name, ID, diagnosis, or payor\u2026",
-        label_visibility="collapsed",
-    )
-with count_col:
-    st.markdown(
-        f'<div style="display:flex; align-items:center; justify-content:flex-end; height:100%; padding-top:8px;">'
-        f'<span class="client-count">'
-        f'<span class="count-num">{len(clients)}</span> active client{"s" if len(clients) != 1 else ""}'
-        f'</span></div>',
-        unsafe_allow_html=True,
-    )
+payor_names = {k: v["display_name"] for k, v in list_available_payors().items()}
+search_col, count_col = st.columns([3, 1], vertical_alignment="center")
+search_query = search_col.text_input(
+    "Search clients",
+    placeholder="Search by name, ID, diagnosis, or payor\u2026",
+    label_visibility="collapsed",
+)
 
-# Filter clients by search
+total_clients = len(clients)
 if search_query:
     q = search_query.lower()
     clients = [
@@ -97,87 +91,77 @@ if search_query:
         if q in c["display_name"].lower()
         or q in (c.get("client_identifier") or "").lower()
         or q in " ".join(c.get("diagnosis_codes") or []).lower()
-        or q in c.get("payor", "").lower()
+        or q in payor_names.get(c["payor"], c["payor"]).lower()
     ]
+
+count_label = (
+    f"of {total_clients} active clients" if search_query
+    else f'active client{"s" if total_clients != 1 else ""}'
+)
+count_col.markdown(
+    f'<div style="display:flex; justify-content:flex-end;"><span class="client-count">'
+    f'<span class="count-num">{len(clients)}</span> {count_label}</span></div>',
+    unsafe_allow_html=True,
+)
 
 if not clients and search_query:
     st.info(f'No clients match "{search_query}".')
     st.stop()
 
-# --- Table Header (HTML) ---
-st.markdown(
-    '<div class="client-table-wrap">'
-    '<div class="client-table-header">'
-    '<div>Client</div>'
-    '<div>Diagnosis</div>'
-    '<div>Payor</div>'
-    '<div style="text-align:right;">Actions</div>'
-    '</div>'
-    '</div>',
-    unsafe_allow_html=True,
-)
+# --- Client Table ---
+COL_WIDTHS = [2, 1.2, 1.8, 3]
 
-# --- Client Rows ---
-for c in clients:
-    client_name = c["display_name"]
-    client_id_str = c.get("client_identifier") or "\u2014"
-    dx_str = ", ".join(c["diagnosis_codes"][:3]) if c["diagnosis_codes"] else "\u2014"
-    payor_display = c["payor"].replace("_", " ").title()
+with st.container(border=True):
+    header = st.columns(COL_WIDTHS, vertical_alignment="center")
+    for col, label in zip(header, ["Client", "Diagnosis", "Payor", "Actions"]):
+        col.markdown(f'<div class="client-table-header-cell">{label}</div>', unsafe_allow_html=True)
 
-    # Row HTML info
-    st.markdown(
-        '<div class="client-table-wrap" style="border-top:none; border-radius:0; margin-top:-1px;">',
-        unsafe_allow_html=True,
-    )
+    for c in clients:
+        st.markdown('<hr class="client-table-divider">', unsafe_allow_html=True)
 
-    row_cols = st.columns([2, 1.2, 1.5, 2])
+        name_html = html.escape(c["display_name"])
+        id_html = html.escape(c.get("client_identifier") or "No client ID")
+        dx_codes = c.get("diagnosis_codes") or []
+        payor_display = payor_names.get(c["payor"], c["payor"].replace("_", " ").title())
 
-    with row_cols[0]:
-        st.markdown(
-            f'<div class="client-name">{client_name}'
-            f'<span class="client-id-sub">{client_id_str}</span></div>',
+        row = st.columns(COL_WIDTHS, vertical_alignment="center")
+        row[0].markdown(
+            f'<div class="client-name">{name_html}'
+            f'<span class="client-id-sub">{id_html}</span></div>',
+            unsafe_allow_html=True,
+        )
+        row[1].markdown(
+            f'<div class="client-cell">{html.escape(", ".join(dx_codes))}</div>'
+            if dx_codes else '<div class="client-cell-muted">\u2014</div>',
+            unsafe_allow_html=True,
+        )
+        row[2].markdown(
+            f'<div><span class="client-payor-badge" title="{html.escape(payor_display)}">'
+            f'{html.escape(payor_display)}</span></div>',
             unsafe_allow_html=True,
         )
 
-    with row_cols[1]:
-        if dx_str == "\u2014":
-            st.markdown(f'<div class="client-cell-muted">{dx_str}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="client-cell">{dx_str}</div>', unsafe_allow_html=True)
-
-    with row_cols[2]:
-        st.markdown(
-            f'<div><span class="client-payor-badge">{payor_display}</span></div>',
-            unsafe_allow_html=True,
-        )
-
-    with row_cols[3]:
-        btn_c1, btn_c2, btn_c3 = st.columns(3)
-        with btn_c1:
-            if st.button("View", key=f"view_{c['id']}", use_container_width=True, type="primary"):
+        confirm_key = f"confirm_archive_{c['id']}"
+        with row[3]:
+            b1, b2, b3 = st.columns(3, gap="small")
+            if b1.button("View", key=f"view_{c['id']}", use_container_width=True, type="primary"):
                 st.session_state.selected_client_id = c["id"]
                 st.switch_page("pages/2_Client_Detail.py")
-        with btn_c2:
-            if st.button("Upload", key=f"upload_{c['id']}", use_container_width=True):
+            if b2.button("Upload", key=f"upload_{c['id']}", use_container_width=True):
                 st.session_state.selected_client_id = c["id"]
                 st.switch_page("pages/3_Upload.py")
-        with btn_c3:
-            confirm_key = f"confirm_archive_{c['id']}"
-            if st.session_state.get(confirm_key):
-                st.warning(f"Archive **{c['display_name']}**?")
-                yes_col, no_col = st.columns(2)
-                with yes_col:
-                    if st.button("Yes", key=f"yes_archive_{c['id']}", type="primary", use_container_width=True):
-                        update_client(c["id"], status="discharged")
-                        st.session_state.pop(confirm_key, None)
-                        st.rerun()
-                with no_col:
-                    if st.button("Cancel", key=f"cancel_archive_{c['id']}", use_container_width=True):
-                        st.session_state.pop(confirm_key, None)
-                        st.rerun()
-            else:
-                if st.button("Archive", key=f"archive_{c['id']}", use_container_width=True, type="secondary"):
-                    st.session_state[confirm_key] = True
-                    st.rerun()
+            if b3.button("Archive", key=f"archive_{c['id']}", use_container_width=True,
+                         disabled=bool(st.session_state.get(confirm_key))):
+                st.session_state[confirm_key] = True
+                st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
+        if st.session_state.get(confirm_key):
+            msg_col, yes_col, no_col = st.columns([5, 1.2, 1.2], vertical_alignment="center")
+            msg_col.warning(f"Archive **{c['display_name']}**? They'll be removed from the active roster.")
+            if yes_col.button("Yes, archive", key=f"yes_archive_{c['id']}", type="primary", use_container_width=True):
+                update_client(c["id"], status="discharged")
+                st.session_state.pop(confirm_key, None)
+                st.rerun()
+            if no_col.button("Cancel", key=f"cancel_archive_{c['id']}", use_container_width=True):
+                st.session_state.pop(confirm_key, None)
+                st.rerun()
