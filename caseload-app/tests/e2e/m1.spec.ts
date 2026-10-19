@@ -49,16 +49,18 @@ test("works offline and makes zero network requests", async () => {
   });
   expect(violated).toBe("connect-src");
   expect(watch.external).toEqual([]);
+  expect(watch.pageErrors).toEqual([]);
   expect(watch.cspViolations.filter((v) => !v.includes("example.com"))).toEqual([]);
   await context.close();
 });
 
 test("data survives closing and reopening the browser", async () => {
   const dir = newProfileDir();
-  let { context, page } = await launchProfile(dir);
+  let { context, page, watch } = await launchProfile(dir);
   await page.goto(APP_URL);
   await completeFirstRun(page, { demo: true });
   const before = await tableCounts(page);
+  expect(watch.pageErrors).toEqual([]);
   expect(before.clients).toBeGreaterThan(0);
   expect(before.sessions).toBeGreaterThan(0);
   await context.close();

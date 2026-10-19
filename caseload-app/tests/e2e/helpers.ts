@@ -13,11 +13,13 @@ export function newProfileDir(): string {
 export interface NetworkWatch {
   external: string[];
   cspViolations: string[];
+  pageErrors: string[];
 }
 
 // Records every request that is not to the local file, plus any CSP violation the page reports.
 export function watchNetwork(context: BrowserContext): NetworkWatch {
-  const watch: NetworkWatch = { external: [], cspViolations: [] };
+  const watch: NetworkWatch = { external: [], cspViolations: [], pageErrors: [] };
+  context.on("weberror", (e) => watch.pageErrors.push(e.error().message));
   context.on("request", (req) => {
     const url = req.url();
     if (!/^(file|data|blob|about):/.test(url)) watch.external.push(url);

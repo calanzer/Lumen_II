@@ -154,7 +154,8 @@ export async function initSync(): Promise<void> {
     if (perm === "granted" && state.dirty) scheduleAutosave();
   }
   onDataChange(() => {
-    if (!state.dirty) void setMeta("dirty", true);
+    // Deferred: changes fire inside other tables' transactions, which do not include `meta`.
+    if (!state.dirty) setTimeout(() => void setMeta("dirty", true).catch(() => null), 0);
     set({ dirty: true });
     scheduleAutosave();
   });
