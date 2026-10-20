@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Optional
 
 from schemas.clinical_data import ExtractedClinicalData
-from schemas.narrative import AnthemReauthNarrative
+from schemas.narrative import AnthemReauthNarrative, Narrative, ReauthTemplate, TemplateSection, parse_narrative
 
 DB_PATH = Path(__file__).parent / "aba_auth.db"
 
@@ -77,6 +77,23 @@ def init_db():
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
+
+            -- Practice-supplied payor templates. Only structure and style are stored
+            -- (section titles/guidance, tone notes) -- never the uploaded report itself.
+            CREATE TABLE IF NOT EXISTS payor_templates (
+                id TEXT PRIMARY KEY,
+                payor TEXT NOT NULL,
+                name TEXT NOT NULL,
+                sections TEXT NOT NULL,
+                style_notes TEXT DEFAULT '',
+                source_filename TEXT,
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_payor_templates_payor
+                ON payor_templates(payor, is_active);
 
             CREATE INDEX IF NOT EXISTS idx_auth_periods_client
                 ON auth_periods(client_id);
@@ -220,7 +237,7 @@ def _deserialize_period(d: dict) -> dict:
 
     if d.get("narrative_data"):
         try:
-            d["narrative_data_parsed"] = AnthemReauthNarrative.model_validate_json(d["narrative_data"])
+            d["narrative_data_parsed"] = parse_narrative(d["narrative_data"])
         except Exception:
             d["narrative_data_parsed"] = None
     else:
@@ -283,7 +300,7 @@ def save_clinical_data(period_id: str, clinical_data: ExtractedClinicalData, val
         )
 
 
-def save_narrative(period_id: str, narrative: AnthemReauthNarrative):
+def save_narrative(period_id: str, narrative: Narrative):
     """Save generated/edited narrative."""
     now = _now()
     with get_db() as conn:
@@ -390,3 +407,58 @@ def get_dashboard_data() -> list[dict]:
 
 # Auto-initialize on import
 init_db()
+
+
+# ── Payor templates ──────────────────────────────────────────────────
+
+def _row_to_template(row) -> ReauthTemplate:
+    return ReauthTemplate(
+        id=row["id"],
+        payor=row["payor"],
+        name=row["name"],
+        sections=[TemplateSection(**s) for s in json.loads(row["sections"])],
+        style_notes=row["style_notes"] or "",
+        source_filename=row["source_filename"],
+    )
+
+
+def save_template(
+    payor: str,
+    name: str,
+    sections: list[TemplateSection],
+    style_notes: str = "",
+    source_filename: Optional[str] = None,
+) -> str:
+    """Save a template and make it the active one for the payor."""
+    template_id = _new_id()
+    now = _now()
+    with get_db() as conn:
+        conn.execute("UPDATE payor_templates SET is_active = 0 WHERE payor = ?", (payor,))
+        conn.execute(
+            """INSERT INTO payor_templates
+               (id, payor, name, sections, style_notes, source_filename, is_active, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)""",
+            (
+                template_id, payor, name,
+                json.dumps([s.model_dump() for s in sections]),
+                style_notes, source_filename, now, now,
+            ),
+        )
+    return template_id
+
+
+def get_active_template(payor: str) -> Optional[ReauthTemplate]:
+    """The template currently used for a payor, or None for the built-in default."""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM payor_templates WHERE payor = ? AND is_active = 1 "
+            "ORDER BY created_at DESC LIMIT 1",
+            (payor,),
+        ).fetchone()
+    return _row_to_template(row) if row else None
+
+
+def clear_active_template(payor: str):
+    """Go back to the built-in default for a payor (keeps saved templates)."""
+    with get_db() as conn:
+        conn.execute("UPDATE payor_templates SET is_active = 0 WHERE payor = ?", (payor,))

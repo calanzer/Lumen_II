@@ -20,8 +20,6 @@ from pipeline.validator import validate_completeness
 from ui_style import (
     inject_custom_css,
     branded_header,
-    sidebar_branding,
-    sidebar_trust_badges,
     empty_state,
     metric_card,
     BRAND_PRIMARY,
@@ -31,8 +29,6 @@ from ui_style import (
 )
 
 inject_custom_css()
-sidebar_branding()
-sidebar_trust_badges()
 
 branded_header("Upload Progress Report", "Upload an ABA progress report to extract clinical data.")
 

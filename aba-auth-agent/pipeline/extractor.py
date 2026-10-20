@@ -14,6 +14,9 @@ from pathlib import Path
 import pdfplumber
 from docx import Document
 
+from pydantic import ValidationError
+
+from pipeline.llm import EFFORT_EXTRACT, MAIN_MODEL, MAX_TOKENS_LARGE, response_text
 from schemas.clinical_data import ExtractedClinicalData
 
 
@@ -29,7 +32,7 @@ def _extract_tables_with_pdfplumber(pdf_bytes: bytes) -> list[list[list[str]]]:
     Returns a list of tables, where each table is a list of rows (list of cell strings).
     """
     tables = []
-    with pdfplumber.open(pdf_bytes) as pdf:
+    with pdfplumber.open(BytesIO(pdf_bytes)) as pdf:
         for page in pdf.pages:
             page_tables = page.extract_tables()
             if page_tables:
@@ -201,6 +204,38 @@ def _build_content_blocks_for_docx(docx_bytes: bytes) -> list[dict]:
     ]
 
 
+# What to store when a report doesn't state a value for a field the schema requires.
+NOT_STATED_TEXT = "Not stated in report"
+_NULL_PLACEHOLDERS = {"string_type": NOT_STATED_TEXT, "int_type": 0, "float_type": 0.0}
+
+
+def _validate_with_null_repair(data: dict) -> ExtractedClinicalData:
+    """Validate extracted data, tolerating nulls for fields the report simply lacks.
+
+    Reports are often incomplete, and the model correctly answers null. Where the schema
+    requires a value, store a visible placeholder and list the field in missing_fields so
+    the gap is flagged for the BCBA instead of crashing the upload. Any other validation
+    problem is raised as before.
+    """
+    for _ in range(5):
+        try:
+            return ExtractedClinicalData.model_validate(data)
+        except ValidationError as exc:
+            errors = exc.errors()
+            fixable = [e for e in errors if e.get("input") is None and e["type"] in _NULL_PLACEHOLDERS]
+            if not fixable or len(fixable) != len(errors):
+                raise
+            repaired = []
+            for err in fixable:
+                parent = data
+                for key in err["loc"][:-1]:
+                    parent = parent[key]
+                parent[err["loc"][-1]] = _NULL_PLACEHOLDERS[err["type"]]
+                repaired.append(".".join(str(part) for part in err["loc"]) + " (not stated in report)")
+            data["missing_fields"] = (data.get("missing_fields") or []) + repaired
+    return ExtractedClinicalData.model_validate(data)
+
+
 def extract_clinical_data(file_bytes: bytes, filename: str) -> ExtractedClinicalData:
     """
     Send document (PDF or DOCX) to Claude API for structured clinical data extraction,
@@ -236,8 +271,9 @@ def extract_clinical_data(file_bytes: bytes, filename: str) -> ExtractedClinical
 
     # Use prompt caching on the system prompt (large, reused across calls)
     message = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=8000,
+        model=MAIN_MODEL,
+        max_tokens=MAX_TOKENS_LARGE,
+        output_config={"effort": EFFORT_EXTRACT},
         system=[
             {
                 "type": "text",
@@ -254,13 +290,13 @@ def extract_clinical_data(file_bytes: bytes, filename: str) -> ExtractedClinical
     )
 
     # Parse response
-    raw_text = _strip_markdown_fences(message.content[0].text)
+    raw_text = _strip_markdown_fences(response_text(message))
     data = json.loads(raw_text)
 
     # Inject metadata
     data["source_filename"] = filename
     data["extraction_timestamp"] = datetime.utcnow().isoformat()
-    data["extraction_model"] = "claude-sonnet-4-20250514"
+    data["extraction_model"] = MAIN_MODEL
 
     # Cross-validate with deterministic table extraction
     try:
@@ -280,5 +316,5 @@ def extract_clinical_data(file_bytes: bytes, filename: str) -> ExtractedClinical
             "Table cross-validation could not be performed."
         ]
 
-    # Validate against Pydantic schema
-    return ExtractedClinicalData.model_validate(data)
+    # Validate against Pydantic schema, tolerating fields the report doesn't state
+    return _validate_with_null_repair(data)

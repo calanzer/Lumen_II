@@ -19,8 +19,6 @@ from schemas.clinical_data import (
 from ui_style import (
     inject_custom_css,
     branded_header,
-    sidebar_branding,
-    sidebar_trust_badges,
     section_header,
     progress_bar_html,
     status_badge,
@@ -31,8 +29,6 @@ from ui_style import (
 )
 
 inject_custom_css()
-sidebar_branding()
-sidebar_trust_badges()
 
 branded_header("Review & Edit Extracted Data", "Verify clinical data before generating the reauthorization narrative.")
 

@@ -12,14 +12,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from data.store import get_auth_period, get_prior_period, save_narrative
-from pipeline.generator import generate_narrative, validate_narrative_against_source
-from schemas.narrative import AnthemReauthNarrative
+from data.store import (
+    get_active_template,
+    get_auth_period,
+    get_client,
+    get_prior_period,
+    save_narrative,
+)
+from pipeline.exporter import list_available_payors
+from pipeline.generator import (
+    generate_custom_narrative,
+    generate_narrative,
+    validate_narrative_against_source,
+)
+from schemas.narrative import CustomNarrative, get_sections
 from ui_style import (
     inject_custom_css,
     branded_header,
-    sidebar_branding,
-    sidebar_trust_badges,
     section_header,
     progress_bar_html,
     status_badge,
@@ -32,8 +41,6 @@ from ui_style import (
 )
 
 inject_custom_css()
-sidebar_branding()
-sidebar_trust_badges()
 
 branded_header("Generate Reauthorization Narrative", "AI-generated draft for BCBA review and editing.")
 
@@ -55,6 +62,12 @@ if st.session_state.get("clinical_data") is None:
     st.stop()
 
 data = st.session_state.clinical_data
+
+# Which layout to generate: the practice's own template for this client's payor, if any
+client_record = get_client(client_id) if client_id else None
+payor_key = (client_record or {}).get("payor") or "anthem_blue_cross_ca"
+payor_name = list_available_payors().get(payor_key, {}).get("display_name", payor_key)
+template = get_active_template(payor_key)
 
 # Prior period comparison
 prior_period = None
@@ -118,11 +131,21 @@ if not validation.get("is_complete", False):
 
 st.markdown("<div style='height:12px;'></div>", unsafe_allow_html=True)
 
-if st.button("Generate Anthem Blue Cross Narrative", type="primary", use_container_width=True):
+if template:
+    st.caption(f"Layout: your template \u201c{template.name}\u201d ({len(template.sections)} sections).")
+else:
+    st.caption("Layout: built-in default. Add your own on the **Templates** page.")
+
+if st.button(f"Generate {payor_name} Narrative", type="primary", use_container_width=True):
     with st.spinner("Generating narrative... (30-60 seconds)"):
         try:
-            narrative = generate_narrative(data)
+            if template:
+                narrative = generate_custom_narrative(data, template, payor_name, payor_key)
+            else:
+                narrative = generate_narrative(data)
             st.session_state.narrative = narrative
+            # New text boxes for the new draft, so earlier edits don't linger in them
+            st.session_state.narrative_version = st.session_state.get("narrative_version", 0) + 1
             # Save to DB
             if period_id:
                 save_narrative(period_id, narrative)
@@ -215,20 +238,10 @@ SECTION_SOURCE_MAP = {
     },
 }
 
-sections = [
-    ("client_overview", "1. Client Overview"),
-    ("assessment_summary", "2. Assessment Summary"),
-    ("skill_acquisition_progress", "3. Skill Acquisition Progress"),
-    ("behavior_reduction_progress", "4. Behavior Reduction Progress"),
-    ("treatment_plan_update", "5. Treatment Plan Update"),
-    ("hours_justification", "6. Hours Utilization & Justification"),
-    ("caregiver_training_summary", "7. Caregiver Training"),
-    ("medical_necessity", "8. Medical Necessity Statement"),
-    ("discharge_plan", "9. Discharge Plan"),
-]
+client_data_json = json.loads(data.model_dump_json())
 
-for field_name, display_name in sections:
-    section = getattr(narrative, field_name)
+for position, (field_name, title, section) in enumerate(get_sections(narrative), start=1):
+    display_name = f"{position}. {title}"
     flag_badge = status_badge("Needs Review", COLOR_WARNING) if section.requires_review else status_badge("OK", COLOR_SUCCESS)
 
     with st.expander(f"{display_name}", expanded=section.requires_review):
@@ -246,10 +259,16 @@ for field_name, display_name in sections:
                 'Source Data (read-only reference)</p>',
                 unsafe_allow_html=True,
             )
-            source_fn = SECTION_SOURCE_MAP.get(field_name)
+            source_fn = None if isinstance(narrative, CustomNarrative) else SECTION_SOURCE_MAP.get(field_name)
             if source_fn:
                 source_data = source_fn(data)
                 st.json(json.loads(json.dumps(source_data, default=str)))
+            else:
+                used = {k: client_data_json[k] for k in section.source_data_keys if k in client_data_json}
+                if used:
+                    st.json(used)
+                else:
+                    st.caption("The AI did not list specific source fields for this section.")
 
         with col_narrative:
             st.markdown(
@@ -261,7 +280,7 @@ for field_name, display_name in sections:
                 f"Edit {display_name}",
                 value=section.content,
                 height=250,
-                key=f"edit_{field_name}",
+                key=f"edit_{st.session_state.get('narrative_version', 0)}_{field_name}",
                 label_visibility="collapsed",
             )
             section.content = edited

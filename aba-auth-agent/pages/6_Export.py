@@ -7,11 +7,10 @@ load_dotenv()
 
 from data.store import get_auth_period, save_export, mark_submitted
 from pipeline.exporter import export_to_docx, list_available_payors
+from schemas.narrative import CustomNarrative, get_sections
 from ui_style import (
     inject_custom_css,
     branded_header,
-    sidebar_branding,
-    sidebar_trust_badges,
     metric_card,
     status_badge,
     progress_bar_html,
@@ -23,8 +22,6 @@ from ui_style import (
 )
 
 inject_custom_css()
-sidebar_branding()
-sidebar_trust_badges()
 
 branded_header("Export Reauthorization Document", "Review summary and download as Word document for payor submission.")
 
@@ -55,14 +52,7 @@ st.markdown(
 
 confidence_color = COLOR_SUCCESS if narrative.overall_confidence >= 0.8 else COLOR_WARNING
 
-review_needed = sum(
-    1 for section_name in [
-        "client_overview", "assessment_summary", "skill_acquisition_progress",
-        "behavior_reduction_progress", "treatment_plan_update", "hours_justification",
-        "caregiver_training_summary", "medical_necessity", "discharge_plan",
-    ]
-    if getattr(narrative, section_name).requires_review
-)
+review_needed = sum(1 for _, _, section in get_sections(narrative) if section.requires_review)
 
 review_color = COLOR_SUCCESS if review_needed == 0 else COLOR_WARNING
 flags_color = COLOR_SUCCESS if len(narrative.flags_for_bcba) == 0 else COLOR_WARNING
@@ -109,17 +99,26 @@ st.markdown(
 )
 
 payors = list_available_payors()
-payor_options = {key: f"{info['display_name']} \u2014 {info['subtitle']}" for key, info in payors.items()}
-selected_payor = st.selectbox(
-    "Choose the payor template for your Word document:",
-    options=list(payor_options.keys()),
-    format_func=lambda k: payor_options[k],
-    index=0,
-)
 
-if not payors[selected_payor]["template_exists"]:
-    st.info(f"A default template will be auto-generated for {payors[selected_payor]['display_name']}. "
-            "You can replace it with a custom .docx template in the `templates/` directory.")
+if isinstance(narrative, CustomNarrative):
+    # Template-driven narratives carry their own payor and layout
+    selected_payor = narrative.payor_key or "anthem_blue_cross_ca"
+    st.info(
+        f"This narrative follows your template \u201c{narrative.template_name}\u201d for "
+        f"{payors.get(selected_payor, {}).get('display_name', selected_payor)}."
+    )
+else:
+    payor_options = {key: f"{info['display_name']} \u2014 {info['subtitle']}" for key, info in payors.items()}
+    selected_payor = st.selectbox(
+        "Choose the payor template for your Word document:",
+        options=list(payor_options.keys()),
+        format_func=lambda k: payor_options[k],
+        index=0,
+    )
+
+    if not payors[selected_payor]["template_exists"]:
+        st.info(f"A default template will be auto-generated for {payors[selected_payor]['display_name']}. "
+                "You can replace it with a custom .docx template in the `templates/` directory.")
 
 st.markdown("<div style='height:16px;'></div>", unsafe_allow_html=True)
 

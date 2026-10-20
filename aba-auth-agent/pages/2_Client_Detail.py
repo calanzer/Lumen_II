@@ -12,8 +12,6 @@ from data.store import (
 from ui_style import (
     inject_custom_css,
     branded_header,
-    sidebar_branding,
-    sidebar_trust_badges,
     status_badge,
     metric_card,
     progress_bar_html,
@@ -27,8 +25,6 @@ from ui_style import (
 )
 
 inject_custom_css()
-sidebar_branding()
-sidebar_trust_badges()
 
 client_id = st.session_state.get("selected_client_id")
 if not client_id:

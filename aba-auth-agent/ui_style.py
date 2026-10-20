@@ -45,7 +45,7 @@ def branded_header(title: str, subtitle: str = ""):
 
 
 def sidebar_branding():
-    """Render branded sidebar with logo area, trust badges, and payor list."""
+    """Render branded sidebar with logo and tagline."""
     st.sidebar.markdown(
         f"""
         <div class="sidebar-brand">
@@ -59,38 +59,6 @@ def sidebar_branding():
         unsafe_allow_html=True,
     )
     st.sidebar.markdown("---")
-
-
-def sidebar_trust_badges():
-    """Render HIPAA and compliance badges in sidebar."""
-    st.sidebar.markdown(
-        """
-        <div class="trust-badges">
-            <div class="trust-badge">
-                <span class="badge-icon">&#128274;</span>
-                <div>
-                    <span class="badge-label">HIPAA Compliant</span>
-                    <span class="badge-sub">De-identified data only</span>
-                </div>
-            </div>
-            <div class="trust-badge">
-                <span class="badge-icon">&#9989;</span>
-                <div>
-                    <span class="badge-label">BCBA-Reviewed</span>
-                    <span class="badge-sub">Clinical oversight required</span>
-                </div>
-            </div>
-            <div class="trust-badge">
-                <span class="badge-icon">&#128196;</span>
-                <div>
-                    <span class="badge-label">Multi-Payor</span>
-                    <span class="badge-sub">5 templates supported</span>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
 
 def metric_card(label: str, value, color: str = BRAND_PRIMARY, icon: str = ""):
@@ -265,42 +233,6 @@ h1, h2, h3, h4, h5, h6 {
     letter-spacing: 0.3px;
 }
 
-/* ===== Trust Badges ===== */
-.trust-badges {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 4px 0;
-}
-
-.trust-badge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    background: #F0F7F9;
-    border-radius: 8px;
-    font-size: 12px;
-}
-
-.badge-icon {
-    font-size: 16px;
-    flex-shrink: 0;
-}
-
-.badge-label {
-    font-weight: 600;
-    color: #1A2B3C;
-    display: block;
-    font-size: 12px;
-}
-
-.badge-sub {
-    color: #6B7280;
-    font-size: 10px;
-    display: block;
-}
-
 /* ===== Branded Header ===== */
 .branded-header {
     margin-bottom: 16px;
@@ -431,59 +363,12 @@ h1, h2, h3, h4, h5, h6 {
     margin-left: 6px;
 }
 
-/* ===== Client Table ===== */
-.client-table-header-cell {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: #6B7280;
+/* Hide Streamlit's "Press Enter to submit form" hint under text inputs */
+[data-testid="InputInstructions"] {
+    display: none;
 }
 
-.client-table-divider {
-    margin: 0 !important;
-    border: none;
-    border-top: 1px solid #EEF0F2;
-}
-
-.client-name {
-    font-weight: 600;
-    font-size: 15px;
-    color: #1A2B3C;
-}
-
-.client-name .client-id-sub {
-    font-weight: 400;
-    font-size: 12px;
-    color: #9CA3AF;
-    display: block;
-    margin-top: 2px;
-}
-
-.client-cell {
-    font-size: 14px;
-    color: #374151;
-}
-
-.client-cell-muted {
-    font-size: 14px;
-    color: #9CA3AF;
-}
-
-.client-payor-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    background: #E6F4F7;
-    color: #0B7285;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
+/* ===== Client count pill ===== */
 .client-count {
     font-size: 13px;
     color: #6B7280;

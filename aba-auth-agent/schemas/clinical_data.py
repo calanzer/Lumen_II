@@ -141,7 +141,7 @@ class ExtractedClinicalData(BaseModel):
     # Metadata
     source_filename: str
     extraction_timestamp: str
-    extraction_model: str = "claude-sonnet-4-20250514"
+    extraction_model: str = "claude-sonnet-5-5"
     confidence_notes: list[str] = Field(default_factory=list, description="Any extraction uncertainties")
 
     # Clinical data
