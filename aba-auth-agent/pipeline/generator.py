@@ -30,17 +30,29 @@ def load_prompt(name: str) -> str:
     return path.read_text()
 
 
-def generate_narrative(data: ExtractedClinicalData) -> AnthemReauthNarrative:
+DEFAULT_PAYOR_NAME = "Anthem Blue Cross California"
+
+# The app's own bookkeeping, not clinical facts; showing it to the model produces
+# spurious flags such as "extraction date is after the authorization period".
+_BOOKKEEPING_FIELDS = {"extraction_timestamp", "extraction_model", "source_filename"}
+
+
+def clinical_json(data: ExtractedClinicalData, indent: int = 2) -> str:
+    """The extracted data as the drafting and checking models should see it."""
+    return data.model_dump_json(indent=indent, exclude=_BOOKKEEPING_FIELDS)
+
+
+def generate_narrative(data: ExtractedClinicalData, payor_name: str = DEFAULT_PAYOR_NAME) -> AnthemReauthNarrative:
     """
-    Generate Anthem Blue Cross CA reauthorization narrative from extracted clinical data.
+    Generate a reauthorization narrative in the built-in nine-section layout for a payor.
 
     Uses prompt caching on the system prompt for ~90% cost savings on repeated calls.
     """
     client = anthropic.Anthropic()
-    system_prompt = load_prompt("generation_system.txt")
+    system_prompt = load_prompt("generation_system.txt").replace("{payor_name}", payor_name)
 
     # Serialize clinical data for the prompt
-    clinical_json = data.model_dump_json(indent=2)
+    clinical_text = clinical_json(data)
 
     message = client.messages.create(
         model=MAIN_MODEL,
@@ -57,8 +69,8 @@ def generate_narrative(data: ExtractedClinicalData) -> AnthemReauthNarrative:
             {
                 "role": "user",
                 "content": (
-                    f"<clinical_data>\n{clinical_json}\n</clinical_data>\n\n"
-                    "Generate the complete Anthem Blue Cross CA reauthorization narrative "
+                    f"<clinical_data>\n{clinical_text}\n</clinical_data>\n\n"
+                    f"Generate the complete {payor_name} reauthorization narrative "
                     "based on the clinical data above. Follow the output format exactly."
                 ),
             }
@@ -90,7 +102,8 @@ def extract_narrative_claims(narrative: Narrative, source_data: ExtractedClinica
 
     message = client.messages.create(
         model=CHECK_MODEL,
-        max_tokens=MAX_TOKENS_SMALL,
+        # A long narrative has well over a hundred numbers; a cut-off list would be unusable
+        max_tokens=MAX_TOKENS_LARGE,
         output_config={"effort": EFFORT_LIGHT},
         system=load_prompt("validation_system.txt"),
         messages=[
@@ -98,7 +111,7 @@ def extract_narrative_claims(narrative: Narrative, source_data: ExtractedClinica
                 "role": "user",
                 "content": (
                     f"<narrative>\n{all_narrative_text}\n</narrative>\n\n"
-                    f"<source_data>\n{source_data.model_dump_json(indent=2)}\n</source_data>\n\n"
+                    f"<source_data>\n{clinical_json(source_data)}\n</source_data>\n\n"
                     "Extract all quantitative claims from the narrative and cross-check "
                     "against the source data. Return discrepancies."
                 ),
@@ -219,7 +232,7 @@ def generate_custom_narrative(
             {
                 "role": "user",
                 "content": (
-                    f"<clinical_data>\n{data.model_dump_json(indent=2)}\n</clinical_data>\n\n"
+                    f"<clinical_data>\n{clinical_json(data)}\n</clinical_data>\n\n"
                     f"Generate the complete {payor_name} reauthorization narrative from the "
                     "clinical data above, following the report structure and output format exactly."
                 ),

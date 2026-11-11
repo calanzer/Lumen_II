@@ -202,3 +202,51 @@ class TestDashboard:
         dashboard = get_dashboard_data()
         assert len(dashboard) == 1
         assert dashboard[0]["urgency"] == "no_period"
+
+
+class TestConcurrentAccess:
+    def test_threads_using_the_database_at_once_do_not_freeze_it(self):
+        """SQLite 3.51.0 deadlocks when threads open and close connections to one file together,
+        which froze the API when the browser asked for several things at once."""
+        import threading
+        import time
+
+        from data import store
+
+        client_id = store.create_client(display_name="Pat", client_identifier="P-1", payor="aetna")
+        stop = time.time() + 2
+        done = []
+
+        def work():
+            while time.time() < stop:
+                store.list_clients()
+                store.list_auth_periods(client_id)
+                store.get_active_template("aetna")
+            done.append(True)
+
+        threads = [threading.Thread(target=work, daemon=True) for _ in range(8)]
+        for t in threads:
+            t.start()
+        deadline = time.time() + 12  # one deadline for all of them, so a freeze fails in seconds
+        for t in threads:
+            t.join(timeout=max(0, deadline - time.time()))
+
+        assert not [t for t in threads if t.is_alive()], "database access froze"
+        assert len(done) == 8
+
+    def test_a_store_function_can_use_another_while_it_holds_a_connection(self):
+        import threading
+
+        from data import store
+
+        result = []
+
+        def nested():
+            with store.get_db():
+                result.append(store.list_clients())  # would wait on itself without a re-entrant lock
+
+        thread = threading.Thread(target=nested, daemon=True)
+        thread.start()
+        thread.join(timeout=5)
+        assert not thread.is_alive(), "a nested store call waited on itself"
+        assert result == [[]]

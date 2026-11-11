@@ -123,6 +123,9 @@ class ClientDemographics(BaseModel):
     auth_period_end: Optional[date] = None
     supervising_bcba: Optional[str] = None
     bcba_credential_number: Optional[str] = None
+    payor_name: Optional[str] = Field(None, description="Insurance payor named in the report, as written")
+    report_period_start: Optional[date] = Field(None, description="Start of the period the report covers, if it differs from or stands in for the authorization period")
+    report_period_end: Optional[date] = None
 
 
 class DischargePlan(BaseModel):

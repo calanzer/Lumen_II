@@ -1,9 +1,14 @@
 .env
 __pycache__/
 *.pyc
-.streamlit/secrets.toml
-.streamlit/auth_config.yaml
+config/auth_config.yaml
 uploads/
 outputs/
 .venv/
 data/aba_auth.db
+
+# Frontend
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+web/.vite/

@@ -16,7 +16,10 @@ Return a single JSON object matching this schema exactly. Use null for fields no
     "auth_period_start": "YYYY-MM-DD or null",
     "auth_period_end": "YYYY-MM-DD or null",
     "supervising_bcba": "string or null",
-    "bcba_credential_number": "string or null"
+    "bcba_credential_number": "string or null",
+    "payor_name": "insurance payor named in the report, as written (for example 'Aetna'), or null",
+    "report_period_start": "YYYY-MM-DD or null (start of the period this report covers)",
+    "report_period_end": "YYYY-MM-DD or null (end of the period this report covers)"
   },
   "assessments": [
     {

@@ -5,7 +5,9 @@ All JSON-serialized Pydantic models are stored as TEXT columns.
 """
 
 import json
+import os
 import sqlite3
+import threading
 import uuid
 from contextlib import contextmanager
 from datetime import date, datetime
@@ -15,7 +17,8 @@ from typing import Optional
 from schemas.clinical_data import ExtractedClinicalData
 from schemas.narrative import AnthemReauthNarrative, Narrative, ReauthTemplate, TemplateSection, parse_narrative
 
-DB_PATH = Path(__file__).parent / "aba_auth.db"
+# ABA_DB_PATH lets a test or demo run against a throwaway database
+DB_PATH = Path(os.environ.get("ABA_DB_PATH") or Path(__file__).parent / "aba_auth.db")
 
 
 def _now() -> str:
@@ -26,21 +29,30 @@ def _new_id() -> str:
     return str(uuid.uuid4())
 
 
+# Only one thread at a time may have a connection open. SQLite 3.51.0 (what Python ships with on
+# some current Macs) can deadlock inside the library when several threads open and close
+# connections to the same file at once, which froze the whole API. Every database call here is a
+# few milliseconds, so taking turns costs nothing noticeable. Re-entrant, so a function that calls
+# another store function while it holds a connection doesn't wait on itself.
+_db_lock = threading.RLock()
+
+
 @contextmanager
 def get_db():
     """Context manager for database connections with WAL mode."""
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+    with _db_lock:
+        conn = sqlite3.connect(str(DB_PATH))
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
 
 def init_db():

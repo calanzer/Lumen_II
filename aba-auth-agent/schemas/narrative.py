@@ -73,6 +73,7 @@ class AnthemReauthNarrative(BaseModel):
     # Metadata
     overall_confidence: float = Field(ge=0, le=1, description="Pipeline confidence score")
     flags_for_bcba: list[str] = Field(default_factory=list, description="Items requiring clinician attention")
+    source_hash: Optional[str] = Field(None, description="Fingerprint of the data this was drafted from")
 
 
 # ── Template-driven narratives ───────────────────────────────────────
@@ -125,6 +126,7 @@ class CustomNarrative(BaseModel):
     sections: list[KeyedSection]
     overall_confidence: float = Field(default=0.0, ge=0, le=1)
     flags_for_bcba: list[str] = Field(default_factory=list)
+    source_hash: Optional[str] = None
 
 
 Narrative = AnthemReauthNarrative | CustomNarrative
