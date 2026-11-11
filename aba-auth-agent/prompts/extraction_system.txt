@@ -16,7 +16,10 @@ Return a single JSON object matching this schema exactly. Use null for fields no
     "auth_period_start": "YYYY-MM-DD or null",
     "auth_period_end": "YYYY-MM-DD or null",
     "supervising_bcba": "string or null",
-    "bcba_credential_number": "string or null"
+    "bcba_credential_number": "string or null",
+    "payor_name": "insurance payor named in the report, as written (for example 'Aetna'), or null",
+    "report_period_start": "YYYY-MM-DD or null (start of the period this report covers)",
+    "report_period_end": "YYYY-MM-DD or null (end of the period this report covers)"
   },
   "assessments": [
     {
@@ -54,7 +57,7 @@ Return a single JSON object matching this schema exactly. Use null for fields no
       "baseline_date": "YYYY-MM-DD or null",
       "current_value": "float or null",
       "current_date": "YYYY-MM-DD or null",
-      "trend": "increasing | decreasing | stable | variable",
+      "trend": "increasing | decreasing | stable | variable | null (null when the report gives no baseline or trend; never guess)",
       "unit": "per hour | minutes per episode | percent of intervals | etc",
       "function_of_behavior": "escape | attention | tangible | sensory | null",
       "intervention_strategies": ["list of strategies"]
@@ -66,7 +69,7 @@ Return a single JSON object matching this schema exactly. Use null for fields no
       "authorized_units": "float",
       "utilized_units": "float",
       "utilization_pct": "float or null",
-      "explanation_if_low": "string or null (required if utilization < 80%)"
+      "explanation_if_low": "string or null. Only the reason the report itself gives for low utilization (under 80%). null if the report gives none; never infer one from other sections"
     }
   ],
   "treatment_goals": [

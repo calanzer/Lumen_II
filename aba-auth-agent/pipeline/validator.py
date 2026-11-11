@@ -97,8 +97,12 @@ def validate_completeness(data: ExtractedClinicalData) -> dict:
         missing.append({"field": "hours_utilization", "description": ANTHEM_REQUIRED_FIELDS["hours_utilization"], "severity": "required"})
     else:
         for h in data.hours_utilization:
-            if h.utilization_pct and h.utilization_pct < 80 and not h.explanation_if_low:
-                warnings.append(f"CPT {h.cpt_code.value}: utilization is {h.utilization_pct:.0f}% with no explanation — will trigger denial.")
+            # Reports often omit the percentage, so work it out from the units
+            pct = h.utilization_pct
+            if pct is None and h.authorized_units:
+                pct = h.utilized_units / h.authorized_units * 100
+            if pct is not None and pct < 80 and not h.explanation_if_low:
+                warnings.append(f"CPT {h.cpt_code.value}: utilization is {pct:.0f}% with no explanation — will trigger denial.")
 
     if not data.treatment_goals:
         missing.append({"field": "treatment_goals", "description": ANTHEM_REQUIRED_FIELDS["treatment_goals"], "severity": "required"})

@@ -16,17 +16,32 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env and add your Anthropic API key
 
-# Run the app
-python -m streamlit run app.py
+# Build the web app once (needs Node 20+)
+(cd web && npm install && npm run build)
+
+# Run it
+.venv/bin/uvicorn api.main:app --port 8000
 ```
 
-The app will open at `http://localhost:8501`.
+The app is at `http://localhost:8000`.
 
-**Default login:** username `bcba_reviewer`, password `changeme`
+**Default login:** username `bcba_reviewer`, password `changeme` (stored hashed in `config/auth_config.yaml`, created on first run; change it before anyone else uses the app).
+
+## Development
+
+```bash
+# Terminal 1: API (set ABA_LOCAL_NO_LOGIN=1 to skip sign-in on your own machine)
+.venv/bin/uvicorn api.main:app --port 8000
+
+# Terminal 2: frontend with hot reload
+cd web && npm run dev          # http://localhost:5173
+```
+
+`ABA_LOCAL_NO_LOGIN=1` only applies to requests from this computer to `localhost`, and the sidebar shows a **Local** badge when it's active. Stack, design tokens, API routes, security notes and quality gates are in [docs/DESIGN.md](docs/DESIGN.md). The Streamlit app this replaced is in git history; what carried over is listed in [docs/PARITY.md](docs/PARITY.md).
 
 ## Workflow
 
-1. **Upload** — Upload an ABA progress report PDF (CentralReach, Catalyst, Rethink, or any standard format)
+1. **Import** — Drop an ABA progress report (PDF or Word; CentralReach, Catalyst, Rethink, or any standard format). The app reads it, finds or creates the client and period, drafts the narrative and cross-checks the numbers
 2. **Review Data** — Verify and edit the extracted clinical data (demographics, assessments, skill targets, behavior data, hours utilization)
 3. **Generate** — Create the reauthorization narrative with AI, review source data side-by-side with generated text, and edit each section
 4. **Export** — Select your payor template and download as a Word document (.docx) for submission
@@ -42,11 +57,11 @@ PDF Upload -> PyMuPDF (classify native vs scanned)
 
 - **Prompt caching** on system prompts for ~90% cost savings on repeated calls
 - **Post-generation validation** via Claude Haiku to cross-check quantitative claims
-- **`@st.cache_data`** prevents redundant API calls on Streamlit page reruns
+- **Background jobs** run imports and narrative generation, so the browser polls instead of waiting on one long request
 
 ## Payor Templates
 
-The Export page lets you select from multiple payor templates. Templates are `.docx` files with Jinja2 placeholders in the `templates/` directory. BCBAs can customize templates in Word without developer involvement.
+The Export screen lets you select from multiple payor templates. Templates are `.docx` files with Jinja2 placeholders in the `templates/` directory. BCBAs can customize templates in Word without developer involvement.
 
 | Payor | Template | Status |
 |-------|----------|--------|
@@ -67,17 +82,19 @@ To customize a template: replace the auto-generated file in `templates/` with yo
 
 ```
 aba-auth-agent/
-├── app.py                     # Streamlit entry point (with auth)
-├── pages/                     # Streamlit multi-page UI
-│   ├── 1_Upload.py            # PDF upload + extraction (cached)
-│   ├── 2_Review_Data.py       # Extracted data review/edit
-│   ├── 3_Generate.py          # Narrative generation + side-by-side BCBA review
-│   └── 4_Export.py            # Payor template selector + DOCX export
+├── api/                       # FastAPI: login, clients, periods, imports, templates; serves web/dist
+├── web/                       # React app (Vite, TypeScript, shadcn/ui, Tailwind v4)
+├── auth_config.py             # Login file loader (config/auth_config.yaml)
+├── data/                      # SQLite store
+├── docs/                      # DESIGN.md, PARITY.md, deploy.md, payor_requirements.md
 ├── pipeline/                  # Core processing modules
 │   ├── classifier.py          # PDF type detection (native vs scanned)
 │   ├── extractor.py           # Claude API extraction + pdfplumber validation
 │   ├── validator.py           # Completeness checker (Anthem requirements)
 │   ├── generator.py           # Claude API narrative generation + cross-validation
+│   ├── intake.py              # Client/period matching and import plan
+│   ├── claim_check.py         # Number-aware cross-check of the narrative
+│   ├── template_extractor.py  # Learns a payor's layout from a past report
 │   └── exporter.py            # Multi-payor DOCX rendering via docxtpl
 ├── schemas/                   # Pydantic data models
 │   ├── clinical_data.py       # Extracted data schema (CPT + HCPCS codes)
@@ -93,6 +110,8 @@ aba-auth-agent/
 source .venv/bin/activate
 pip install pytest
 python -m pytest tests/ -v
+
+cd web && npx vitest run && npx tsc -b && npx oxlint
 ```
 
 Tests validate Pydantic schemas and the completeness validator. Extraction and generation tests require a valid `ANTHROPIC_API_KEY`.

@@ -6,12 +6,12 @@
 Browser (BCBA)
     │  HTTPS
     ▼
-Nginx (TLS) → Streamlit App → Anthropic API
-                   │
-                SQLite DB
+Nginx (TLS) → uvicorn: API + built web app → Anthropic API
+                          │
+                       SQLite DB
 ```
 
-Single process, local SQLite, outbound HTTPS to Anthropic. ~$25-50/month total.
+Single process (keep it to one worker: import and generation jobs live in memory), local SQLite, outbound HTTPS to Anthropic. ~$25-50/month total.
 
 Push to GitHub → auto-deploys via GitHub Actions. After initial setup, you never SSH into the server again.
 
@@ -34,7 +34,7 @@ SSH into your Lightsail instance and run this entire block:
 # Install dependencies
 sudo apt update && sudo apt install -y \
     python3.11 python3.11-venv python3-pip \
-    nginx certbot python3-certbot-nginx sqlite3
+    nginx certbot python3-certbot-nginx sqlite3 nodejs npm
 
 # Clone your repo
 git clone https://github.com/<you>/<repo>.git /opt/aba-auth-agent
@@ -45,12 +45,15 @@ python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
+# Build the web app (needs Node 20+; if apt's nodejs is older, install a current one first)
+(cd web && npm ci && npm run build)
+
 # Set API key
 cp .env.example .env
 nano .env  # Set ANTHROPIC_API_KEY=sk-ant-...
 
 # Remove default auth config (app will regenerate on first launch)
-rm -f .streamlit/auth_config.yaml
+rm -f config/auth_config.yaml
 
 # Create systemd service
 sudo tee /etc/systemd/system/aba-auth-agent.service > /dev/null <<'UNIT'
@@ -63,11 +66,9 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/opt/aba-auth-agent/aba-auth-agent
 Environment="PATH=/opt/aba-auth-agent/aba-auth-agent/.venv/bin:/usr/bin"
-ExecStart=/opt/aba-auth-agent/aba-auth-agent/.venv/bin/streamlit run app.py \
-    --server.port=8501 \
-    --server.address=127.0.0.1 \
-    --server.headless=true \
-    --browser.gatherUsageStats=false
+Environment="ABA_HTTPS_ONLY=1"
+ExecStart=/opt/aba-auth-agent/aba-auth-agent/.venv/bin/uvicorn api.main:app \
+    --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=5
 
@@ -82,17 +83,15 @@ sudo tee /etc/nginx/sites-available/aba-auth-agent > /dev/null <<'NGINX'
 server {
     listen 80;
     server_name yourdomain.com;
+    client_max_body_size 50m;   # reports can be up to 50 MB
 
     location / {
-        proxy_pass http://127.0.0.1:8501;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_read_timeout 86400;
+        proxy_read_timeout 120;
     }
 }
 NGINX
@@ -149,6 +148,7 @@ jobs:
             cd aba-auth-agent
             source .venv/bin/activate
             pip install -q -r requirements.txt
+            (cd web && npm ci && npm run build)
             sudo systemctl restart aba-auth-agent
 ```
 
@@ -169,7 +169,8 @@ That's it. Push code → GitHub deploys it → app restarts.
 
 - [ ] Change default login credentials (`bcba_reviewer` / `changeme`)
 - [ ] Verify HTTPS works
-- [ ] Test the full workflow (upload → review → generate → export)
+- [ ] Test the full workflow (import → review → generate → export)
+- [ ] Make sure `ABA_LOCAL_NO_LOGIN` is not set on the server
 - [ ] Push a small change to verify GitHub Actions deploy works
 - [ ] Confirm Anthropic BAA is signed
 - [ ] Check backups are running (`ls /opt/aba-auth-agent/backups/`)

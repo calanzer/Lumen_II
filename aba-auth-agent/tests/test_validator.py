@@ -51,3 +51,44 @@ def test_low_utilization_generates_warning():
     result = validate_completeness(clinical_data)
 
     assert any("utilization" in w.lower() for w in result["warnings"])
+
+
+class TestLowUtilizationFromUnits:
+    """Reports often omit the utilization percentage; it must be computed from the units."""
+
+    def _data_with_hours(self, authorized, utilized, pct=None, explanation=None):
+        import json
+        from pathlib import Path
+
+        from schemas.clinical_data import ExtractedClinicalData
+
+        with open(Path(__file__).parent / "fixtures" / "realistic_extraction.json") as f:
+            data = json.load(f)
+        data["hours_utilization"] = [
+            {
+                "cpt_code": "97153",
+                "authorized_units": authorized,
+                "utilized_units": utilized,
+                "utilization_pct": pct,
+                "explanation_if_low": explanation,
+            }
+        ]
+        return ExtractedClinicalData.model_validate(data)
+
+    def test_flags_low_utilization_when_percentage_not_stated(self):
+        from pipeline.validator import validate_completeness
+
+        result = validate_completeness(self._data_with_hours(1560, 910))
+        assert any("97153" in w and "58%" in w for w in result["warnings"])
+
+    def test_explanation_clears_the_warning(self):
+        from pipeline.validator import validate_completeness
+
+        result = validate_completeness(self._data_with_hours(1560, 910, explanation="Two illnesses."))
+        assert not any("97153" in w for w in result["warnings"])
+
+    def test_healthy_utilization_not_flagged(self):
+        from pipeline.validator import validate_completeness
+
+        result = validate_completeness(self._data_with_hours(2080, 1872))
+        assert not any("97153" in w for w in result["warnings"])

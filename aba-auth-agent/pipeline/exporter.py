@@ -11,7 +11,7 @@ from io import BytesIO
 from docxtpl import DocxTemplate
 
 from schemas.clinical_data import ExtractedClinicalData
-from schemas.narrative import AnthemReauthNarrative
+from schemas.narrative import AnthemReauthNarrative, CustomNarrative, Narrative
 
 
 # Registry of supported payors and their template filenames
@@ -138,19 +138,9 @@ def get_template_path(payor_key: str = "anthem_blue_cross_ca") -> Path:
     return template_path
 
 
-def export_to_docx(
-    data: ExtractedClinicalData,
-    narrative: AnthemReauthNarrative,
-    payor_key: str = "anthem_blue_cross_ca",
-) -> bytes:
-    """
-    Render the narrative into a Word document using the payor-specific template.
-    Returns the document as bytes for download.
-    """
-    template_path = get_template_path(payor_key)
-    doc = DocxTemplate(str(template_path))
-
-    context = {
+def _header_context(data: ExtractedClinicalData) -> dict:
+    """Client and authorization header fields shared by all export paths."""
+    return {
         "client_id": data.client.client_id or "[CLIENT ID]",
         "diagnosis": ", ".join(
             f"{code} ({desc})"
@@ -164,6 +154,123 @@ def export_to_docx(
         "supervising_bcba": data.client.supervising_bcba or "[BCBA NAME]",
         "bcba_credential": data.client.bcba_credential_number or "[CREDENTIAL #]",
         "date_prepared": date.today().isoformat(),
+    }
+
+
+def _split_markdown_blocks(content: str) -> list[tuple[str, object]]:
+    """Split narrative text into ("p", text), ("bullet", text) and ("table", rows) blocks.
+
+    The AI writes tables and bullet lists as light markdown; Word needs real ones.
+    """
+    blocks: list[tuple[str, object]] = []
+    table_rows: list[list[str]] = []
+
+    def flush_table():
+        if table_rows:
+            blocks.append(("table", list(table_rows)))
+            table_rows.clear()
+
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("|") and stripped.endswith("|") and len(stripped) > 1:
+            cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+            if all(set(cell) <= set("-: ") and cell for cell in cells):
+                continue  # the |---|---| divider row
+            table_rows.append(cells)
+            continue
+        flush_table()
+        if not stripped:
+            continue
+        if stripped[:2] in ("- ", "* "):
+            blocks.append(("bullet", stripped[2:].strip()))
+        else:
+            blocks.append(("p", stripped))
+    flush_table()
+    return blocks
+
+
+def _export_custom_docx(data: ExtractedClinicalData, narrative: CustomNarrative) -> bytes:
+    """Render a template-driven narrative: one heading + body per template section."""
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt
+
+    ctx = _header_context(data)
+    payor_name = PAYOR_TEMPLATES.get(narrative.payor_key, {}).get("display_name", "")
+
+    doc = Document()
+    doc.styles["Normal"].font.name = "Calibri"
+    doc.styles["Normal"].font.size = Pt(11)
+
+    title = doc.add_heading("ABA Reauthorization Request", level=1)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    if payor_name:
+        doc.add_paragraph(payor_name).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph("")
+
+    doc.add_paragraph(f"Client ID: {ctx['client_id']}")
+    doc.add_paragraph(f"Diagnosis: {ctx['diagnosis']}")
+    doc.add_paragraph(f"Authorization Period: {ctx['auth_period_start']} \u2014 {ctx['auth_period_end']}")
+    doc.add_paragraph(f"Supervising BCBA: {ctx['supervising_bcba']} ({ctx['bcba_credential']})")
+    doc.add_paragraph(f"Date Prepared: {ctx['date_prepared']}")
+    doc.add_paragraph("")
+
+    for index, section in enumerate(narrative.sections, start=1):
+        doc.add_heading(f"{index}. {section.section_name or section.key}", level=2)
+        for kind, value in _split_markdown_blocks(section.content):
+            if kind == "table":
+                width = max(len(row) for row in value)
+                table = doc.add_table(rows=len(value), cols=width)
+                table.style = "Light Grid Accent 1"
+                for r, row in enumerate(value):
+                    for c in range(width):
+                        cell = table.rows[r].cells[c]
+                        cell.text = row[c] if c < len(row) else ""
+                        for run in cell.paragraphs[0].runs:
+                            run.font.size = Pt(9)
+                            run.bold = run.bold or r == 0
+            elif kind == "bullet":
+                doc.add_paragraph(value, style="List Bullet")
+            else:
+                doc.add_paragraph(value)
+        doc.add_paragraph("")
+
+    doc.add_paragraph(f"Prepared by: {ctx['supervising_bcba']}")
+    doc.add_paragraph(f"Credential: {ctx['bcba_credential']}")
+    doc.add_paragraph(f"Date: {ctx['date_prepared']}")
+    doc.add_paragraph("")
+    disclaimer = doc.add_paragraph(
+        "DISCLOSURE: This document was drafted with AI assistance and reviewed/approved "
+        "by the supervising BCBA listed above."
+    )
+    disclaimer.runs[0].font.size = Pt(9)
+
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def export_to_docx(
+    data: ExtractedClinicalData,
+    narrative: Narrative,
+    payor_key: str = "anthem_blue_cross_ca",
+) -> bytes:
+    """
+    Render the narrative into a Word document.
+
+    Default narratives use the payor-specific .docx template; template-driven
+    (custom) narratives are rendered from their own sections.
+    Returns the document as bytes for download.
+    """
+    if isinstance(narrative, CustomNarrative):
+        return _export_custom_docx(data, narrative)
+
+    template_path = get_template_path(payor_key)
+    doc = DocxTemplate(str(template_path))
+
+    context = {
+        **_header_context(data),
         # Narrative sections
         "client_overview": narrative.client_overview.content,
         "assessment_summary": narrative.assessment_summary.content,
